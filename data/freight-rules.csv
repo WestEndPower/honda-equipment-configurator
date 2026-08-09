@@ -1,0 +1,4 @@
+﻿Active,Amount,AppliesTo,AppliesToValue,ApplyWhen,ChargeType,DealerCostBasis,DeliveryGroup,DisplayLabel,FreightGroup,MaximumCharge,MinimumCharge,Percent,QtyMax,QtyMin,RuleID,RuleName,SortOrder,Notes
+T,40,FreightGroup,HONDA_SPECIAL_40,NotInStock,Fixed,,,Honda Standarized Freight,HONDA_SPECIAL_40,,,,,1,FRT-HONDA-40,Honda $40 Standardized Freight,10,$40 per unit when special ordered
+T,60,FreightGroup,HONDA_SPECIAL_60,NotInStock,Fixed,,,Honda Standarized Freight,HONDA_SPECIAL_60,,,,,1,FRT-HONDA-60,Honda $60 Standardized Freight,20,$60 per unit when special ordered
+T,100,BrandID,HONDA,NotInStock,FixedPerOrder,,,Hond Special Order Fee,HONDA_SPECIAL,,,,2,1,FRT-HONDA-ORDER,Honda Special Order Fee,30,Add $100 once when combined Honda special-order quantity is 1 or 2; waive at 3 or more.

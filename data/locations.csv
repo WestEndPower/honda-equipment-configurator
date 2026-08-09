@@ -1,0 +1,3 @@
+﻿LocationID,Active,LocationName,Address,City,State,ZIP,Phone,Email,PickupAvailable,DeliveryAvailable,SortOrder
+NM,T,West End Power Equipment - New Milford,265 Danbury Road,New Milford,CT,06776,860-355-8722,sales@westendpower.com,T,T,1
+DA,T,West End Power Equipment - Danbury,56 Beaver Brook Road,Danbury,CT,06810,203-792-3030,dawepe@westendpower.com,T,T,2

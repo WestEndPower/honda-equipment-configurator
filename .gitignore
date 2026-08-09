@@ -1,0 +1,9 @@
+.vscode/
+*.xls
+*.xlsx
+*.xlsm
+Sync-Private-Configurator.ps1
+Publish-PriceTags.ps1
+Publish-PriceTags.cmd
+Install-PriceTagButton.ps1
+Install-PriceTagButton.cmd
