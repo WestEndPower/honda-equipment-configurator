@@ -240,7 +240,8 @@
   text-align:center;
   margin:0 0 8px;
   line-height:1.15;
-  white-space:nowrap;
+  white-space:normal;
+  overflow-wrap:break-word;
 }
     .stihl-price{font-size:22px;font-weight:900}
   .stihl-sale-price{
@@ -1620,11 +1621,11 @@ function createQuoteNumber(brand){
 
 function displayProductTitle(tool){
 
-  const type =
-    clean(tool.SubCategory) ||
-    clean(tool.Category);
-
-  return `${clean(tool.BrandName || tool.Brand || 'Equipment')} ${clean(tool.Model)}${type ? ' ' + type : ''}`;
+  return clean(tool.Description) ||
+    clean(tool.ProductName) ||
+    clean(tool.Name) ||
+    clean(tool.Model) ||
+    skuOf(tool);
 }
 
 function warrantyDuration(value){
