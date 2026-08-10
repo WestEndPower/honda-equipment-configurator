@@ -3894,9 +3894,10 @@ function requestPublicFinanceEligibility(tool){
         },
 
         body:
-          JSON.stringify({
-            sku
-          }),
+  JSON.stringify({
+    brandId: "HONDA",
+    sku
+  }),
 
         cache:"no-store"
       }
@@ -10420,16 +10421,21 @@ const maxQty = Number(clean(
 }
 
 function freightRuleMatchesGroup(rule, group){
-  const ruleGroup = freightKey(rule.FreightGroup || rule.Group || rule.Category);
-  const itemGroup = freightKey(group);
+  const ruleGroup =
+    freightKey(
+      rule.FreightGroup ||
+      rule.Group ||
+      rule.Category
+    );
 
-  if(!ruleGroup || !itemGroup) return false;
+  const itemGroup =
+    freightKey(group);
 
-  return (
-    ruleGroup === itemGroup ||
-    itemGroup.startsWith(ruleGroup) ||
-    ruleGroup.startsWith(itemGroup)
-  );
+  if(!ruleGroup || !itemGroup){
+    return false;
+  }
+
+  return ruleGroup === itemGroup;
 }
 
 function freightApplyWhenMatches(rule, groupInfo){
