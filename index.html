@@ -612,7 +612,6 @@ body.dealer-mode .dealer-only{
   <button
     id="dealerModeBtn"
     class="stihl-dealer-btn"
-    hidden
     type="button">
     🔒 Dealer Mode
 </button>
@@ -1508,7 +1507,8 @@ body.dealer-mode .dealer-only{
 };
 
     /* Honda private services are intentionally disconnected in this pilot. */
-    const CONFIGURATOR_API = "";
+    const CONFIGURATOR_API =
+  "https://westendpower-configurator-api.westendpower-nm.workers.dev";
 
 const STRIPE_CHECKOUT_API = "";
 
@@ -3317,14 +3317,49 @@ function publicPricingKey(
 
 function publicServerPricingForLine(line){
 
-  if(!CONFIGURATOR_API){
+  const selection =
+  currentPublicPricingSelection();
+
+if(!CONFIGURATOR_API){
+
+  if(
+    !selection ||
+    !line ||
+    !line.item ||
+    line.included
+  ){
     return {
-      automaticDiscount:0
+      automaticDiscount: 0
     };
   }
 
-  const selection =
-    currentPublicPricingSelection();
+  const quantity =
+    Number(line.qty) || 1;
+
+  const unitPriceAfterRebate =
+    Math.max(
+      priceOf(line.item) -
+      rebateToCustomerOf(line.item),
+      0
+    );
+
+  const rawUnitCashDiscount =
+    selection.paymentMethod === 'cash'
+      ? unitPriceAfterRebate * 0.03
+      : 0;
+
+  const unitCashDiscount =
+    rawUnitCashDiscount < 10
+      ? 0
+      : Math.floor(
+          rawUnitCashDiscount / 10
+        ) * 10;
+
+  return {
+    automaticDiscount:
+      unitCashDiscount * quantity
+  };
+}
 
   if(!selection){
     return {
@@ -3359,6 +3394,7 @@ function publicServerPricingForLine(line){
     publicPricingPending.add(key);
 
     const requestBody = {
+    brandId:"HONDA",
       sku,
       quantity:
         Number(line?.qty) || 1,
@@ -3962,6 +3998,17 @@ function publicFinanceProgramIsAllowed(
 }
 
 function financeProgramFeeIsAllowed(program, tool){
+
+  /*
+    Honda local pilot:
+    Public finance eligibility comes from the
+    exported Honda finance-programs.csv file.
+    Private dealer-fee restrictions will resume
+    when the secure Honda API is connected.
+  */
+  if(clean(CONFIGURATOR_API) === ''){
+    return true;
+  }
 
   if(
     !document.body.classList.contains(
@@ -8622,6 +8669,15 @@ ${isDealer ? dealerKitBreakdownPrintHtml() : ''}
       </strong>
     </div>
 
+    ${paymentApplicationFee() > 0 ? `
+      <div>
+        Bank Application Fee:
+        <strong>
+          ${fmtMoney(paymentApplicationFee())}
+        </strong>
+      </div>
+    ` : ''}
+
     <div>
       Amount Financed + Fees:
       <strong>
@@ -8818,25 +8874,82 @@ async function priceTagCustomerPricing(
   financeProgramId = null
 ){
 
+  if(clean(CONFIGURATOR_API) === ''){
+
+    const baseUnitPrice =
+      priceOf(tool);
+
+    const customerRebate =
+      rebateToCustomerOf(tool);
+
+    /*
+      Honda local pilot:
+      Cash and credit remain at the same selling price.
+      Private profitability discounts will be added when
+      the secure Honda Dealer Mode is connected.
+    */
+    const priceAfterRebate =
+  Math.max(
+    baseUnitPrice -
+    customerRebate,
+    0
+  );
+
+const rawCashDiscount =
+  paymentMethod === 'cash'
+    ? priceAfterRebate * 0.03
+    : 0;
+
+const automaticDiscount =
+  rawCashDiscount < 10
+    ? 0
+    : Math.floor(
+        rawCashDiscount / 10
+      ) * 10;
+
+    const customerLinePrice =
+      Math.max(
+        baseUnitPrice -
+        customerRebate -
+        automaticDiscount,
+        0
+      );
+
+    return {
+      ok: true,
+      sku: skuOf(tool),
+      quantity: 1,
+      paymentMethod,
+      financeProgramId,
+      baseUnitPrice,
+      customerRebate,
+      automaticDiscount,
+      customerLinePrice,
+      customerUnitPrice:
+        customerLinePrice
+    };
+  }
+
   const response = await fetch(
     CONFIGURATOR_API +
     "/customer-pricing",
     {
-      method:"POST",
+      method: "POST",
 
-      headers:{
+      headers: {
         "Content-Type":
           "application/json"
       },
 
-      body:JSON.stringify({
-        sku:skuOf(tool),
-        quantity:1,
-        paymentMethod,
-        financeProgramId
-      }),
+      body: JSON.stringify({
+  brandId: "HONDA",
+  sku: skuOf(tool),
+  quantity: 1,
+  paymentMethod,
+  financeProgramId
+}),
 
-      cache:"no-store"
+      cache: "no-store"
     }
   );
 
@@ -8856,22 +8969,49 @@ async function priceTagCustomerPricing(
 
 async function priceTagFinancePrograms(tool){
 
+  if(clean(CONFIGURATOR_API) === ''){
+
+  return state.paymentOptions
+    .filter(program =>
+      clean(program.Public) === '' ||
+      isTrue(program.Public)
+    )
+    .filter(program => {
+
+      const brand =
+        clean(
+          program.BrandID ||
+          program.Brand
+        ).toUpperCase();
+
+      return (
+        brand === '' ||
+        brand === 'HONDA'
+      );
+    })
+    .sort((a, b) =>
+      money(a.SortOrder) -
+      money(b.SortOrder)
+    );
+}
+
   const response = await fetch(
     CONFIGURATOR_API +
     "/customer-finance-programs",
     {
-      method:"POST",
+      method: "POST",
 
-      headers:{
+      headers: {
         "Content-Type":
           "application/json"
       },
 
-      body:JSON.stringify({
-        sku:skuOf(tool)
-      }),
+      body: JSON.stringify({
+  brandId: "HONDA",
+  sku: skuOf(tool)
+}),
 
-      cache:"no-store"
+      cache: "no-store"
     }
   );
 
@@ -11147,12 +11287,36 @@ if(
   const groupColumns =
   financeGroupColumnsForTool(tool);
 
-  return (
-    isTrue(program.AllProducts) ||
-    groupColumns.some(column => isTrue(program[column])) ||
-    (sku && isTrue(program[sku])) ||
-    (model && isTrue(program[model]))
+  const programBrand =
+  clean(
+    program.BrandID ||
+    program.Brand
+  ).toUpperCase();
+
+const toolBrand =
+  clean(
+    tool.BrandID ||
+    tool.BrandName ||
+    tool.Brand
+  ).toUpperCase();
+
+const brandWideProgram =
+  programBrand === 'HONDA' ||
+  (
+    programBrand !== '' &&
+    toolBrand !== '' &&
+    programBrand === toolBrand
   );
+
+return (
+  brandWideProgram ||
+  isTrue(program.AllProducts) ||
+  groupColumns.some(column =>
+    isTrue(program[column])
+  ) ||
+  (sku && isTrue(program[sku])) ||
+  (model && isTrue(program[model]))
+);
 }
     
      async function emailQuote(){
@@ -15393,7 +15557,7 @@ async function unlockDealer(){
 
     return;
   }
-
+ 
   message.textContent =
     "Checking dealer access...";
 
@@ -15412,7 +15576,10 @@ async function unlockDealer(){
             "X-Dealer-Password":password
           },
 
-          body:"{}",
+          body:
+  JSON.stringify({
+    brandId:"HONDA"
+  }),
           cache:"no-store"
         }
       );
