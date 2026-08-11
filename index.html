@@ -787,19 +787,6 @@ body.dealer-mode .dealer-only{
         <section class="stihl-panel stihl-summary" id="stihl-quote-summary-panel">
           <h2>Quote Summary</h2>
 
-<div style="
-  display:flex;
-  justify-content:flex-end;
-  margin-bottom:12px;
-">
-  <button
-    id="stihl-view-quote"
-    type="button"
-    class="stihl-btn secondary">
-    View Itemized Quote
-  </button>
-</div>
-
 <div class="dealer-only" style="margin-bottom:12px;">
   <label for="stihl-salesperson">Prepared By</label>
 
@@ -1075,6 +1062,69 @@ body.dealer-mode .dealer-only{
   </div>
 
 </div>
+<div class="stihl-card dealer-only" id="stihl-sale-record-card">
+  <h3 style="margin-top:0;">Sale / Payment Record</h3>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+    <div>
+      <label for="stihl-sale-status">Transaction Status</label>
+      <select id="stihl-sale-status">
+        <option value="quote">Quote Only</option>
+        <option value="deposit">Deposit Received</option>
+        <option value="paid">Paid in Full</option>
+      </select>
+    </div>
+
+    <div>
+      <label for="stihl-sale-payment-type">Payment Type</label>
+      <select id="stihl-sale-payment-type">
+        <option value="">Select Payment Type</option>
+        <option value="Cash">Cash</option>
+        <option value="Check">Check</option>
+        <option value="Credit / Debit Card">Credit / Debit Card</option>
+        <option value="Financing">Financing</option>
+        <option value="Payment Link">Payment Link</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
+    <div>
+      <label for="stihl-sale-amount-received">Amount Received</label>
+      <input id="stihl-sale-amount-received" type="number" min="0" step="0.01" placeholder="0.00">
+    </div>
+
+    <div>
+      <label for="stihl-sale-payment-date">Payment Date</label>
+      <input id="stihl-sale-payment-date" type="date">
+    </div>
+  </div>
+
+  <div style="margin-top:10px;">
+    <label for="stihl-sale-reference">Check / Payment Reference</label>
+    <input id="stihl-sale-reference" placeholder="Optional reference number">
+  </div>
+
+  <div style="margin-top:12px;border-top:2px solid #ddd;padding-top:8px;">
+    <div class="stihl-line">
+      <span>Sales Order Number</span>
+      <strong id="stihl-sales-order-number-display">Not Created</strong>
+    </div>
+    <div class="stihl-line">
+      <span>Payment Received</span>
+      <strong id="stihl-sale-received-display">$0.00</strong>
+    </div>
+    <div class="stihl-line" style="font-weight:900;">
+      <span>Balance Due</span>
+      <strong id="stihl-sale-balance-display">$0.00</strong>
+    </div>
+  </div>
+
+  <div class="stihl-small" style="margin-top:8px;color:#666;">
+    This records a payment handled separately. It does not process or verify payment.
+  </div>
+</div>
 <div class="stihl-card" id="stihl-trade-card">
   <h3>Trade-In</h3>
 
@@ -1213,7 +1263,7 @@ body.dealer-mode .dealer-only{
     Manufacturer<br>Resources
   </a>
 
-  <a href="#"
+  <a href="https://westendpower-configurator-api.westendpower-nm.workers.dev/dashboard"
      target="_blank"
      rel="noopener"
      class="stihl-btn light"
@@ -1457,8 +1507,8 @@ body.dealer-mode .dealer-only{
          
           
           <div class="stihl-btn-row">
-            <button class="stihl-btn secondary" id="stihl-print" type="button">
-  Print Quote
+            <button class="stihl-btn secondary" id="stihl-view-quote" type="button">
+  View / Print Quote
 </button>
 
 <button class="stihl-btn light dealer-only" id="stihl-dealer-print" type="button">
@@ -4619,6 +4669,17 @@ document
   if($('stihl-trade-fields')) $('stihl-trade-fields').style.display = 'none';
   if($('stihl-trade-allowance')) $('stihl-trade-allowance').value = '0';
 
+  if($('stihl-sale-status')) $('stihl-sale-status').value = 'quote';
+  if($('stihl-sale-payment-type')) $('stihl-sale-payment-type').value = '';
+  if($('stihl-sale-amount-received')) $('stihl-sale-amount-received').value = '';
+  if($('stihl-sale-payment-date')) $('stihl-sale-payment-date').value = '';
+  if($('stihl-sale-reference')) $('stihl-sale-reference').value = '';
+
+  if($('stihl-sales-order-number-display')){
+    $('stihl-sales-order-number-display').textContent = 'Not Created';
+    $('stihl-sales-order-number-display').dataset.orderNumber = '';
+  }
+
   renderToolDetails();
 renderAllOptions();
 renderKMARuntimeMatrix();
@@ -5267,8 +5328,6 @@ $('stihl-tool-select').addEventListener('change', selectTool);
       $('stihl-add-charger').addEventListener('click', ()=> addSelected('charger'));
       $('stihl-add-attachment').addEventListener('click', ()=> addSelected('attachment'));
       // Accessories are now added from image cards rendered below.
-      $('stihl-print').addEventListener('click', () => printSalesSheet(false));
-
 if($('stihl-dealer-print')){
   $('stihl-dealer-print').addEventListener('click', () => printSalesSheet(true));
 }
@@ -5287,6 +5346,21 @@ if($('stihl-dealer-print')){
   'stihl-customer-email',
   'stihl-quote-notes'
 ].forEach(id => $(id).addEventListener('input', renderCart));
+
+[
+  'stihl-sale-status',
+  'stihl-sale-payment-type',
+  'stihl-sale-amount-received',
+  'stihl-sale-payment-date',
+  'stihl-sale-reference'
+].forEach(id => {
+  const el = $(id);
+
+  if(el){
+    el.addEventListener('input', renderCart);
+    el.addEventListener('change', renderCart);
+  }
+});
 
 /* ---------- Trade-In Module ---------- */
 
@@ -5894,6 +5968,34 @@ const quoteFinanceAnalysis =
     : null;
 
 const quoteData = {
+  document: {
+    dealerMode:
+      document.body.classList.contains('dealer-mode'),
+
+    brandId: 'HONDA',
+
+    maximumPaymentDiscountPercent:
+      Math.max(
+        maxPaymentDiscountPercent(),
+
+        quoteProductSubtotal > 0
+          ? (
+              paymentSavings /
+              quoteProductSubtotal
+            ) * 100
+          : 0
+      ),
+
+    creditCardFeePercent: 3,
+
+    taxRate: TAX_RATE,
+
+    financeDealerFeePercent:
+      selectedProgram
+        ? money(selectedProgram.DealerFeePercent)
+        : 0
+  },
+
   lines: quoteLines,
 
   customer: {
@@ -5930,6 +6032,10 @@ const quoteData = {
     salesperson:
       clean($('stihl-salesperson')?.value)
   },
+
+  sale: saleRecord(
+    money($('stihl-total')?.textContent)
+  ),
 
   payment: {
     cash:
@@ -8425,6 +8531,100 @@ const printFinanceProgram =
     </div>
   `;
 
+  const printedSaleRecord = saleRecord(
+    money($('stihl-total')?.textContent)
+  );
+
+  const customerDocumentTitle =
+    printedSaleRecord.status === 'deposit'
+      ? 'Deposit Receipt'
+      : printedSaleRecord.status === 'paid'
+        ? 'Sales Order — Paid in Full'
+        : 'Customer Quote';
+
+  const paymentRecordBlock =
+    printedSaleRecord.status !== 'quote'
+      ? `
+        <div style="
+          margin-top:10px;
+          border:2px solid #1f7a3a;
+          padding:7px 8px;
+          text-align:left;
+          page-break-inside:avoid;
+        ">
+          <div style="
+            font-size:14px;
+            font-weight:900;
+            margin-bottom:5px;
+          ">
+            ${escapeHtml(printedSaleRecord.statusLabel)}
+          </div>
+
+          <table style="
+            width:100%;
+            border-collapse:collapse;
+            margin:0;
+            font-size:11px;
+          ">
+            <thead>
+              <tr>
+                <th>Status</th>
+                <th style="text-align:right;">Amount Received</th>
+                <th>Payment Type</th>
+                <th>Payment Date</th>
+                <th>Reference</th>
+                <th style="text-align:right;">Balance Due</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              <tr>
+                <td>
+                  ${escapeHtml(printedSaleRecord.statusLabel)}
+                </td>
+
+                <td style="text-align:right;font-weight:900;">
+                  ${fmtMoney(printedSaleRecord.amountReceived)}
+                </td>
+
+                <td>
+                  ${escapeHtml(
+                    printedSaleRecord.paymentType ||
+                    'Not Recorded'
+                  )}
+                </td>
+
+                <td>
+                  ${printedSaleRecord.paymentDate
+                    ? escapeHtml(
+                        new Date(
+                          printedSaleRecord.paymentDate +
+                          'T00:00:00'
+                        ).toLocaleDateString()
+                      )
+                    : '—'}
+                </td>
+
+                <td>
+                  ${printedSaleRecord.reference
+                    ? escapeHtml(printedSaleRecord.reference)
+                    : '—'}
+                </td>
+
+                <td style="
+                  text-align:right;
+                  font-size:13px;
+                  font-weight:900;
+                ">
+                  ${fmtMoney(printedSaleRecord.balanceDue)}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      `
+      : '';
+
   const quoteItems = state.cart
     .filter(line => !line.included)
     .map(line => {
@@ -8551,12 +8751,26 @@ return isDealer ? `
 ` : `
   <tr>
     <td>${qty}</td>
-    <td>${escapeHtml(stihlId)}</td>
-    <td>${escapeHtml(desc)}</td>
-    <td style="text-align:right;">${fmtMoney(unitMsrp)}</td>
-    <td style="text-align:right;">${fmtMoney(unitDiscount)}</td>
-    <td style="text-align:right;">${fmtMoney(unitYourPrice)}</td>
-    <td style="text-align:right;">${fmtMoney(customerLineTotal)}</td>
+
+    <td>
+      ${escapeHtml(desc)}
+    </td>
+
+    <td>
+      ${escapeHtml(stihlId)}
+    </td>
+
+    <td style="text-align:right;">
+      ${fmtMoney(lineMsrp)}
+    </td>
+
+    <td style="text-align:right;">
+      ${fmtMoney(customerLineDiscount)}
+    </td>
+
+    <td style="text-align:right;font-weight:800;">
+      ${fmtMoney(customerLineTotal)}
+    </td>
   </tr>
 `;
     })
@@ -8565,17 +8779,159 @@ return isDealer ? `
   $('stihl-sales-sheet-output').innerHTML = `
     <div class="stihl-sales-sheet">
       <div class="stihl-sales-header">
-        <h1>West End Power Equipment</h1>
-        <div style="font-size:16px;font-weight:800;">
-          ${isDealer ? 'Dealer Worksheet' : 'Customer Quote'}
-        </div>
-        <div style="font-size:12px;margin-top:4px;">
-          Quote #: ${quoteNumber} |
-Date: ${quoteDate} |
-Valid Through: ${validThroughDate}
-${salesperson ? ` | Prepared By: ${escapeHtml(salesperson)}` : ''}
-        </div>
-        ${customerBlock}
+
+        ${isDealer ? `
+          <h1>West End Power Equipment</h1>
+
+          <div style="font-size:16px;font-weight:800;">
+            Dealer Worksheet
+          </div>
+
+          <div style="font-size:12px;margin-top:4px;">
+            Quote #: ${quoteNumber} |
+            Date: ${quoteDate} |
+            Valid Through: ${validThroughDate}
+            ${salesperson
+              ? ` | Prepared By: ${escapeHtml(salesperson)}`
+              : ''}
+            ${printedSaleRecord.orderNumber
+              ? `<br>Sales Order #: ${escapeHtml(printedSaleRecord.orderNumber)}`
+              : ''}
+          </div>
+
+          ${customerBlock}
+        ` : `
+          <div style="
+            display:flex;
+            justify-content:space-between;
+            align-items:flex-end;
+            border-bottom:2px solid #111;
+            padding-bottom:5px;
+            margin-bottom:7px;
+          ">
+            <div>
+              <h1 style="
+                margin:0;
+                font-size:21px;
+                line-height:1.1;
+              ">
+                West End Power Equipment
+              </h1>
+            </div>
+
+            <div style="
+              font-size:17px;
+              font-weight:900;
+              text-align:right;
+            ">
+              ${customerDocumentTitle}
+            </div>
+          </div>
+
+          <div style="
+            display:grid;
+            grid-template-columns:1fr 1fr;
+            gap:20px;
+            font-size:11px;
+            line-height:1.4;
+            margin-bottom:8px;
+          ">
+            <div>
+              <div style="
+                font-size:12px;
+                font-weight:900;
+                margin-bottom:2px;
+              ">
+                Customer
+              </div>
+
+              ${customerName
+                ? `<div><strong>${escapeHtml(customerName)}</strong></div>`
+                : ''}
+
+              ${businessName
+                ? `<div>${escapeHtml(businessName)}</div>`
+                : ''}
+
+              ${customerStreet
+                ? `<div>${escapeHtml(customerStreet)}</div>`
+                : ''}
+
+              ${(customerCity || customerState || customerZip)
+                ? `
+                  <div>
+                    ${escapeHtml(customerCity)}
+                    ${customerCity && customerState ? ', ' : ''}
+                    ${escapeHtml(customerState)}
+                    ${customerZip
+                      ? ` ${escapeHtml(customerZip)}`
+                      : ''}
+                  </div>
+                `
+                : ''}
+
+              ${customerPhone
+                ? `<div>${escapeHtml(customerPhone)}</div>`
+                : ''}
+
+              ${customerAltPhone
+                ? `<div>Alt: ${escapeHtml(customerAltPhone)}</div>`
+                : ''}
+
+              ${customerEmail
+                ? `<div>${escapeHtml(customerEmail)}</div>`
+                : ''}
+            </div>
+
+            <div>
+              <div style="
+                font-size:12px;
+                font-weight:900;
+                margin-bottom:2px;
+              ">
+                Order
+              </div>
+
+              ${printedSaleRecord.orderNumber
+                ? `
+                  <div>
+                    <strong>Sales Order:</strong>
+                    ${escapeHtml(printedSaleRecord.orderNumber)}
+                  </div>
+                `
+                : ''}
+
+              <div>
+                <strong>Quote:</strong>
+                ${escapeHtml(quoteNumber)}
+              </div>
+
+              <div>
+                <strong>Date:</strong>
+                ${escapeHtml(quoteDate)}
+              </div>
+
+              ${printedSaleRecord.status === 'quote'
+                ? `
+                  <div>
+                    <strong>Valid Through:</strong>
+                    ${escapeHtml(validThroughDate)}
+                  </div>
+                `
+                : ''}
+
+              ${salesperson
+                ? `
+                  <div>
+                    <strong>Prepared By:</strong>
+                    ${escapeHtml(salesperson)}
+                  </div>
+                `
+                : ''}
+            </div>
+          </div>
+        `}
+
       </div>
 
       <table style="width:100%;border-collapse:collapse;font-size:11px;">
@@ -8584,10 +8940,12 @@ ${salesperson ? ` | Prepared By: ${escapeHtml(salesperson)}` : ''}
             ${isDealer ? `
               <th>Qty</th><th>SKU</th><th>Description</th><th>MSRP</th><th>Discount</th><th>Sale</th><th>Cost</th><th>Gross Profit</th><th>Gross Margin</th>
             ` : `
-              <th>Qty</th><th>SKU</th><th>Description</th><th>MSRP</th>
-<th>Discount</th>
-<th>Your Price</th>
-<th>Line Total</th>
+              <th>Qty</th>
+              <th>Description</th>
+              <th>SKU</th>
+              <th style="text-align:right;">MSRP</th>
+              <th style="text-align:right;">Discount / Rebate</th>
+              <th style="text-align:right;">Final Price</th>
             `}
           </tr>
         </thead>
@@ -8658,51 +9016,115 @@ ${salesperson ? ` | Prepared By: ${escapeHtml(salesperson)}` : ''}
       ${isDealer ? bidFleetDealerPrintHtml() : ''}
 ${isDealer ? dealerKitBreakdownPrintHtml() : ''}
 
-      <div style="margin-top:16px;text-align:right;font-size:14px;line-height:1.6;">
-  
+      <div style="
+        margin-top:7px;
+        margin-left:auto;
+        width:390px;
+        max-width:100%;
+        font-size:12px;
+        line-height:1.25;
+        page-break-inside:avoid;
+      ">
+
+  <div style="
+    display:flex;
+    justify-content:space-between;
+    gap:15px;
+    padding:2px 4px;
+  ">
+    <span>
+      ${isDealer ? 'Subtotal' : 'Itemized Equipment Total'}
+    </span>
+
+    <strong>
+      ${$('stihl-subtotal')?.textContent || '$0.00'}
+    </strong>
+  </div>
+
   ${freightFee() > 0 ? `
-    <div>
-      Freight:
+    <div style="
+      display:flex;
+      justify-content:space-between;
+      gap:15px;
+      padding:2px 4px;
+    ">
+      <span>Freight</span>
       <strong>${fmtMoney(freightFee())}</strong>
     </div>
   ` : ''}
 
   ${setupFee() > 0 ? `
-    <div>
-      Setup / Installation:
+    <div style="
+      display:flex;
+      justify-content:space-between;
+      gap:15px;
+      padding:2px 4px;
+    ">
+      <span>Setup / Installation</span>
       <strong>${fmtMoney(setupFee())}</strong>
     </div>
   ` : ''}
 
   ${deliveryLabel() ? `
-    <div>
-      ${escapeHtml(deliveryLabel())}:
+    <div style="
+      display:flex;
+      justify-content:space-between;
+      gap:15px;
+      padding:2px 4px;
+    ">
+      <span>${escapeHtml(deliveryLabel())}</span>
+
       <strong>
-        ${deliveryFee() > 0 ? fmtMoney(deliveryFee()) : 'Included'}
+        ${deliveryFee() > 0
+          ? fmtMoney(deliveryFee())
+          : 'Included'}
       </strong>
     </div>
   ` : ''}
 
   ${warrantyAmount() > 0 ? `
-    <div>
-      ${escapeHtml(warrantyLabel())}:
+    <div style="
+      display:flex;
+      justify-content:space-between;
+      gap:15px;
+      padding:2px 4px;
+    ">
+      <span>${escapeHtml(warrantyLabel())}</span>
       <strong>${fmtMoney(warrantyAmount())}</strong>
     </div>
   ` : ''}
 
-  <div>
-    Subtotal:
-    <strong>${$('stihl-subtotal')?.textContent || '$0.00'}</strong>
+  <div style="
+    display:flex;
+    justify-content:space-between;
+    gap:15px;
+    padding:2px 4px;
+  ">
+    <span>CT Sales Tax</span>
+
+    <strong>
+      ${$('stihl-tax')?.textContent || '$0.00'}
+    </strong>
   </div>
 
-  <div>
-    Estimated CT Sales Tax:
-    <strong>${$('stihl-tax')?.textContent || '$0.00'}</strong>
+  <div style="
+    display:flex;
+    justify-content:space-between;
+    gap:15px;
+    border-top:2px solid #111;
+    margin-top:3px;
+    padding:4px;
+    font-size:16px;
+    font-weight:900;
+  ">
+    <span>OUT-THE-DOOR PRICE</span>
+
+    <strong>
+      ${$('stihl-total')?.textContent || '$0.00'}
+    </strong>
   </div>
 
-  <div style="font-size:18px;font-weight:900;border-top:2px solid #111;margin-top:5px;padding-top:5px;">
-    Out-the-Door Price: ${$('stihl-total')?.textContent || '$0.00'}
-  </div>
+  ${paymentRecordBlock}
 
   ${printFinanceProgram ? `
   <div style="
@@ -8755,16 +9177,36 @@ ${isDealer ? dealerKitBreakdownPrintHtml() : ''}
 
 </div>
 
-      <p style="margin-top:20px;font-size:11px;">
+      ${!isDealer && quoteNotes ? `
+        <div style="
+          margin-top:7px;
+          padding:5px 7px;
+          border:1px solid #bbb;
+          background:#f7f7f7;
+          font-size:11px;
+          line-height:1.3;
+          page-break-inside:avoid;
+        ">
+          <strong>Notes:</strong>
+          ${escapeHtml(quoteNotes)}
+        </div>
+      ` : ''}
+
+      <p style="
+        margin-top:8px;
+        margin-bottom:0;
+        font-size:9px;
+        line-height:1.25;
+      ">
         Prices, availability, compatibility, promotions, financing, delivery, and final order details are subject to West End Power confirmation. Special-order freight and availability may apply.
       </p>
     </div>
   `;
 
   printWindow.document.title =
-  isDealer
-    ? 'Dealer Worksheet'
-    : 'Customer Quote';
+    isDealer
+      ? 'Dealer Worksheet'
+      : customerDocumentTitle;
 
 printWindow.document.body.innerHTML = '';
 
@@ -8772,9 +9214,18 @@ const printStyle =
   printWindow.document.createElement('style');
 
 printStyle.textContent = `
+  @page{
+    size:letter portrait;
+    margin:0.35in;
+  }
+
+  *{
+    box-sizing:border-box;
+  }
+
   body{
     margin:0;
-    padding:24px;
+    padding:12px;
     font-family:Arial,Helvetica,sans-serif;
     color:#111;
     background:#fff;
@@ -8782,30 +9233,48 @@ printStyle.textContent = `
 
   .stihl-sales-sheet{
     display:block !important;
+    width:100%;
     max-width:1000px;
     margin:0 auto;
+  }
+
+  .stihl-sales-header{
+    margin:0;
+    padding:0;
   }
 
   table{
     width:100%;
     border-collapse:collapse;
-    margin-top:14px;
+    margin-top:6px;
+    page-break-inside:avoid;
   }
 
-  th,td{
+  th,
+  td{
     border-bottom:1px solid #ddd;
-    padding:7px;
+    padding:4px 5px;
     text-align:left;
+    vertical-align:top;
   }
 
   th{
     background:#f5f5f5;
     font-weight:800;
+    line-height:1.15;
+  }
+
+  p{
+    page-break-inside:avoid;
   }
 
   @media print{
     body{
       padding:0;
+    }
+
+    .stihl-sales-sheet{
+      max-width:none;
     }
   }
 `;
@@ -11322,6 +11791,128 @@ function selectedProgramAllowsRebate(){
 function currentQuoteTotal(){
   const txt = clean($('stihl-total')?.textContent).replace(/[$,]/g,'');
   return Number(txt) || 0;
+}
+
+function createSalesOrderNumber(){
+  const d = new Date();
+  return 'SO-HONDA-' +
+    d.getFullYear() +
+    String(d.getMonth() + 1).padStart(2,'0') +
+    String(d.getDate()).padStart(2,'0') +
+    '-' +
+    String(d.getTime()).slice(-5);
+}
+
+function ensureSalesOrderNumber(){
+  const status = clean($('stihl-sale-status')?.value);
+  const display = $('stihl-sales-order-number-display');
+
+  if(!display) return '';
+
+  if(status === 'quote'){
+    display.textContent = 'Not Created';
+    display.dataset.orderNumber = '';
+    return '';
+  }
+
+  if(!clean(display.dataset.orderNumber)){
+    display.dataset.orderNumber = createSalesOrderNumber();
+  }
+
+  display.textContent = display.dataset.orderNumber;
+  return display.dataset.orderNumber;
+}
+
+function saleRecord(totalOverride){
+  const total = Math.max(
+    Number(totalOverride) || currentQuoteTotal(),
+    0
+  );
+
+  const status = clean($('stihl-sale-status')?.value) || 'quote';
+  const amountInput = $('stihl-sale-amount-received');
+
+  let amountReceived =
+    status === 'quote'
+      ? 0
+      : Math.min(
+          Math.max(money(amountInput?.value), 0),
+          total
+        );
+
+  if(status === 'paid'){
+    amountReceived = total;
+
+    if(amountInput){
+      amountInput.value = total.toFixed(2);
+    }
+  }
+
+  if(amountInput){
+    amountInput.disabled = status === 'quote' || status === 'paid';
+
+    if(status === 'quote'){
+      amountInput.value = '';
+    }
+  }
+
+  const orderNumber = ensureSalesOrderNumber();
+
+  return {
+    status,
+    statusLabel:
+      status === 'deposit'
+        ? 'Deposit Received'
+        : status === 'paid'
+          ? 'Paid in Full'
+          : 'Quote Only',
+    orderNumber,
+    amountReceived,
+    balanceDue: Math.max(total - amountReceived, 0),
+    paymentType: clean($('stihl-sale-payment-type')?.value),
+    paymentDate: clean($('stihl-sale-payment-date')?.value),
+    reference: clean($('stihl-sale-reference')?.value)
+  };
+}
+
+function renderSaleRecordSummary(total){
+  const record = saleRecord(total);
+
+  if(
+    record.status !== 'quote' &&
+    $('stihl-sale-payment-date') &&
+    !clean($('stihl-sale-payment-date').value)
+  ){
+    const today = new Date();
+    const localDate = new Date(
+      today.getTime() - today.getTimezoneOffset() * 60000
+    );
+
+    $('stihl-sale-payment-date').value =
+      localDate.toISOString().slice(0,10);
+  }
+
+  if($('stihl-sale-received-display')){
+    $('stihl-sale-received-display').textContent =
+      fmtMoney(record.amountReceived);
+  }
+
+  if($('stihl-sale-balance-display')){
+    $('stihl-sale-balance-display').textContent =
+      fmtMoney(record.balanceDue);
+  }
+
+  if($('stihl-sale-payment-type')){
+    $('stihl-sale-payment-type').disabled = record.status === 'quote';
+  }
+
+  if($('stihl-sale-payment-date')){
+    $('stihl-sale-payment-date').disabled = record.status === 'quote';
+  }
+
+  if($('stihl-sale-reference')){
+    $('stihl-sale-reference').disabled = record.status === 'quote';
+  }
 }
 
 function financingApplies(program){
@@ -15340,6 +15931,7 @@ $('stihl-tax').textContent = fmtMoney(finalTax);
 $('stihl-total').textContent = fmtMoney(finalTotal);
 
 renderDepositSummary(finalTotal);
+renderSaleRecordSummary(finalTotal);
 
 renderFinancingOptions();
     }

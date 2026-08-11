@@ -98,11 +98,134 @@
   opacity:.9;
 }
 
-@media print{
+.dealer-document-tools,
+.dealer-payment-panel,
+.dealer-cost-panel{
+  display:none;
+}
+
+body.quote-dealer .dealer-document-tools,
+body.quote-dealer .dealer-payment-panel{
+  display:block;
+}
+
+.quote-status{
+  display:inline-block;
+  margin-top:6px;
+  padding:4px 9px;
+  border-radius:999px;
+  background:#eee;
+  font-size:11px;
+  font-weight:900;
+  text-transform:uppercase;
+}
+
+.quote-status.order{
+  background:#e9f7ed;
+  color:#17652d;
+}
+
+.dealer-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px;
+}
+
+.dealer-field label{
+  display:block;
+  margin-bottom:4px;
+  color:#555;
+  font-size:11px;
+  font-weight:900;
+  text-transform:uppercase;
+}
+
+.dealer-field input,
+.dealer-field select{
+  width:100%;
+  min-height:38px;
+  border:1px solid #bbb;
+  border-radius:6px;
+  padding:8px;
+  background:#fff;
+  font:inherit;
+}
+
+.dealer-panel{
+  margin-top:20px;
+  border:1px solid #ccc;
+  border-radius:10px;
+  padding:14px;
+  background:#fafafa;
+}
+
+.dealer-panel h3{
+  margin:0 0 12px;
+}
+
+.payment-status-received{
+  color:#17652d;
+  font-weight:900;
+}
+
+.payment-status-voided{
+  color:#777;
+  text-decoration:line-through;
+}
+
+.cost-summary-row{
+  display:flex;
+  justify-content:space-between;
+  gap:20px;
+  padding:5px 0;
+  border-bottom:1px solid #ddd;
+}
+
+.cost-summary-row.total{
+  border-top:2px solid #111;
+  border-bottom:0;
+  margin-top:4px;
+  padding-top:8px;
+  font-size:16px;
+}
+
+/* Compact document rows */
+th,
+td{
+  padding:6px 8px;
+  line-height:1.2;
+}
+
+/* Larger customer and quote information */
+.customer-info-block,
+.quote-info-block{
+  font-size:15px;
+  line-height:1.45;
+}
+
+#quote-customer-name{
+  font-size:18px;
+  margin-bottom:2px;
+}
+
+#quote-number,
+#quote-salesperson,
+#quote-date{
+  font-size:16px;
+}
+
+/* Keep payment history especially compact */
+#payment-history th,
+#payment-history td,
+#quote-public-payment-table th,
+#quote-public-payment-table td{
+  padding:5px 7px;
+  line-height:1.15;
+}
 
   @page{
     size:letter;
-    margin:.4in;
+    margin:1in;
   }
 
   body{
@@ -120,6 +243,13 @@
   }
 
   .quote-actions{
+    display:none !important;
+  }
+
+  .dealer-document-tools,
+  .dealer-payment-panel,
+  .dealer-cost-panel,
+  .dealer-screen-only{
     display:none !important;
   }
 
@@ -143,6 +273,12 @@
       text-align:center;
       color:#666;
     }
+
+    @media(max-width:760px){
+      body{padding:12px;}
+      .quote{padding:18px;}
+      .dealer-grid{grid-template-columns:1fr;}
+    }
   </style>
 </head>
 
@@ -161,13 +297,36 @@
   <button
     type="button"
     class="quote-btn"
-    onclick="window.print()">
-    Print Quote
+    onclick="printCustomerDocument()">
+    Print / Save
   </button>
 </div>
 
     <h1>West End Power Equipment</h1>
-    <h2>Itemized Quote</h2>
+    <h2 id="quote-document-title">Itemized Quote</h2>
+    <div id="quote-document-status" class="quote-status">Quote</div>
+
+    <div class="dealer-document-tools dealer-panel dealer-screen-only">
+      <h3>Dealer Quote Controls</h3>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;">
+        <button
+          type="button"
+          class="quote-btn"
+          id="quote-convert-order">
+          Convert to Sales Order
+        </button>
+
+        <button
+          type="button"
+          class="quote-btn secondary"
+          id="quote-toggle-costs">
+          View Costs &amp; Profit
+        </button>
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:#666;">
+        Dealer controls and financial information never print on customer documents.
+      </div>
+    </div>
 
     <div style="
   display:grid;
@@ -176,7 +335,7 @@
   margin-bottom:20px;
 ">
 
-  <div>
+   <div class="customer-info-block">
     <div style="
       font-size:12px;
       font-weight:900;
@@ -194,7 +353,7 @@
     <div id="quote-customer-email"></div>
   </div>
 
-  <div style="text-align:right;">
+  <div class="quote-info-block" style="text-align:right;">
     <div style="
       font-size:12px;
       font-weight:900;
@@ -330,7 +489,7 @@
 </tr>
 
 <tr id="quote-adjustment-row" style="display:none;">
-  <td>Other Quote Adjustment</td>
+  <td>Payment Method Price Adjustment</td>
 
   <td
     class="num"
@@ -418,6 +577,120 @@
 
 </div>
 
+<div id="quote-sale-record-wrap" style="
+  display:none;
+  margin-top:24px;
+  border:2px solid #1f7a3a;
+  border-radius:10px;
+  overflow:hidden;
+  page-break-inside:avoid;
+">
+  <div style="background:#1f7a3a;color:#fff;padding:10px 14px;font-weight:900;">
+    Sale / Payment Record
+  </div>
+  <table style="margin-top:0;">
+    <tr><td>Status</td><td class="num" id="quote-sale-status"></td></tr>
+    <tr><td>Sales Order Number</td><td class="num" id="quote-sales-order-number"></td></tr>
+    <tr><td>Total Received</td><td class="num" id="quote-sale-amount-received">$0.00</td></tr>
+    <tr class="total"><td>Balance Due</td><td class="num" id="quote-sale-balance-due">$0.00</td></tr>
+  </table>
+
+  <table id="quote-public-payment-table" style="display:none;margin-top:0;">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th class="num">Amount</th>
+        <th>Payment Method</th>
+        <th>Reference</th>
+      </tr>
+    </thead>
+    <tbody id="quote-public-payment-history"></tbody>
+  </table>
+</div>
+
+<div class="dealer-payment-panel dealer-panel dealer-screen-only" id="dealer-payment-panel">
+  <h3>Record a Payment</h3>
+
+  <div class="dealer-grid">
+    <div class="dealer-field">
+      <label for="payment-date">Payment Date</label>
+      <input id="payment-date" type="date">
+    </div>
+
+    <div class="dealer-field">
+      <label for="payment-amount">Amount Received</label>
+      <input id="payment-amount" type="number" min="0" step="0.01" placeholder="0.00">
+    </div>
+
+    <div class="dealer-field">
+      <label for="payment-method">Payment Method</label>
+      <select id="payment-method">
+        <option value="">Select Payment Method</option>
+        <option value="cash">Cash</option>
+        <option value="bank-check">Bank Check</option>
+        <option value="check">Personal / Business Check</option>
+        <option value="credit-card">Credit Card</option>
+        <option value="debit-card">Debit Card</option>
+        <option value="finance">Financing</option>
+        <option value="payment-link">Payment Link</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+
+    <div class="dealer-field" id="payment-card-type-wrap" style="display:none;">
+      <label for="payment-card-type">Card Type</label>
+      <select id="payment-card-type">
+        <option value="">Select Card Type</option>
+        <option value="Visa">Visa</option>
+        <option value="Mastercard">Mastercard</option>
+        <option value="Discover">Discover</option>
+        <option value="American Express">American Express</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+
+    <div class="dealer-field">
+      <label for="payment-reference">Last 4 / Check # / Reference</label>
+      <input id="payment-reference" maxlength="40" autocomplete="off">
+    </div>
+
+    <div class="dealer-field">
+      <label for="payment-received-by">Received By</label>
+      <input id="payment-received-by" maxlength="60">
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:12px;margin-top:12px;">
+    <button type="button" class="quote-btn" id="payment-record-button">
+      Record Payment
+    </button>
+    <span id="payment-message" style="font-size:12px;font-weight:800;"></span>
+  </div>
+
+  <div id="payment-history-wrap" style="display:none;margin-top:14px;">
+    <h3>Payment History</h3>
+    <table style="margin-top:0;">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th class="num">Amount</th>
+          <th>Method</th>
+          <th>Details</th>
+          <th>Received By</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="payment-history"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="dealer-cost-panel dealer-panel dealer-screen-only" id="dealer-cost-panel">
+  <h3>Dealer Costs &amp; Profit</h3>
+  <div id="dealer-cost-summary"></div>
+</div>
+
 <div id="quote-notes-wrap" style="
   display:none;
   margin-top:24px;
@@ -447,11 +720,26 @@ const savedLines =
 const savedTotals =
   quoteData.totals || {};
 
-  const savedCustomer =
+const savedCustomer =
   quoteData.customer || {};
+
+const savedSale =
+  quoteData.sale || {};
 
 const savedPayment =
   quoteData.payment || {};
+
+const savedDocument =
+  quoteData.document || {};
+
+const dealerQuoteMode =
+  savedDocument.dealerMode === true &&
+  sessionStorage.getItem('dealerMode') === '1';
+
+document.body.classList.toggle(
+  'quote-dealer',
+  dealerQuoteMode
+);
 
     function clean(v){
       return String(v ?? '').trim();
@@ -557,7 +845,7 @@ const savedPayment =
     }else{
 
       quoteLines.innerHTML =
-        visibleLines.map(line => {
+        visibleLines.map((line,lineIndex) => {
 
           const qty =
             Number(line.qty) || 1;
@@ -611,8 +899,22 @@ totalDiscount,
         )
       );
 
+line.originalPaymentDiscount =
+  paymentDiscount;
+
+line.originalTotalDiscount =
+  totalDiscount;
+
+line.originalFinalLineTotal =
+  finalLinePrice;
+
+line.revisedPaymentDiscount =
+  paymentDiscount;
+
+line.paymentMethodAdjustment = 0;
+
           return `
-            <tr>
+            <tr data-quote-line="${lineIndex}">
               <td>
                 ${qty}
               </td>
@@ -622,6 +924,7 @@ totalDiscount,
   ${escapeHtml(itemName(line.item))}
 </strong>
 
+<div id="quote-line-detail-${lineIndex}">
 ${money(line.totalDiscount) > 0 ? `
   <div style="
     margin-top:3px;
@@ -665,6 +968,7 @@ money(line.bidFleetDiscount) > 0
     }
   </div>
 ` : ''}
+</div>
               </td>
 
               <td>
@@ -675,7 +979,7 @@ money(line.bidFleetDiscount) > 0
                 ${fmtMoney(unitPrice)}
               </td>
 
-              <td class="num" style="
+              <td id="quote-line-discount-${lineIndex}" class="num" style="
   color:${totalDiscount > 0 ? '#b00020' : '#111'};
   font-weight:${totalDiscount > 0 ? '900' : '400'};
 ">
@@ -685,15 +989,28 @@ money(line.bidFleetDiscount) > 0
   }
 </td>
 
-<td class="num" style="font-weight:900;">
+<td id="quote-line-final-${lineIndex}" class="num" style="font-weight:900;">
   ${line.included
     ? 'Included'
     : fmtMoney(finalLinePrice)
   }
 </td>
+            </tr>
           `;
 
-        }).join('');
+        }).join('') + `
+          <tr id="quote-payment-adjustment-note" style="display:none;">
+            <td colspan="6" style="
+              padding:7px 10px;
+              background:#fff8ef;
+              border-left:4px solid #f58220;
+              font-size:11px;
+              font-weight:800;
+            ">
+              Payment Method Price Adjustment: payment savings were recalculated by line based on the actual payment methods recorded.
+            </td>
+          </tr>
+        `;
     }
 
     const equipmentSubtotal =
@@ -703,7 +1020,7 @@ money(line.bidFleetDiscount) > 0
     0
   );
 
-const itemizedEquipmentTotal =
+let itemizedEquipmentTotal =
   visibleLines.reduce(
     (sum, line) =>
       sum + money(line.finalLineTotal),
@@ -1041,22 +1358,114 @@ document.getElementById(
   savedCustomer.salesperson ||
   'Not Selected';
 
-  const quoteDate =
-  new Date();
+function documentNumber(prefix){
+  const value = new Date();
+
+  return (
+    prefix + '-' +
+    value.getFullYear() +
+    String(value.getMonth() + 1).padStart(2,'0') +
+    String(value.getDate()).padStart(2,'0') +
+    '-' +
+    String(value.getTime()).slice(-5)
+  );
+}
+
+function simpleHash(value){
+  let hash = 2166136261;
+
+  for(const character of String(value || '')){
+    hash ^= character.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  return (hash >>> 0).toString(36);
+}
+
+const quoteFingerprint = simpleHash(
+  JSON.stringify({
+    customer: savedCustomer,
+    lines: visibleLines.map(line => ({
+      sku: itemSku(line.item),
+      qty: Number(line.qty) || 1,
+      total: money(line.finalLineTotal)
+    })),
+    total: actualOutTheDoor
+  })
+);
+
+const quoteStorageKey =
+  'westEndQuoteOrder:' + quoteFingerprint;
+
+let storedDocument = {};
+
+try{
+  storedDocument = JSON.parse(
+    localStorage.getItem(quoteStorageKey) || '{}'
+  );
+}catch(error){
+  storedDocument = {};
+}
+
+const documentState = {
+  quoteNumber:
+    clean(storedDocument.quoteNumber) ||
+    documentNumber('HONDA'),
+
+  quoteDate:
+    clean(storedDocument.quoteDate) ||
+    new Date().toISOString(),
+
+  orderNumber:
+    clean(storedDocument.orderNumber) ||
+    clean(savedSale.orderNumber),
+
+  baseTotal:
+    money(storedDocument.baseTotal) ||
+    actualOutTheDoor,
+
+  priceAdjustment:
+    money(storedDocument.priceAdjustment),
+
+  payments:
+    Array.isArray(storedDocument.payments)
+      ? storedDocument.payments
+      : []
+};
+
+if(
+  !documentState.payments.length &&
+  money(savedSale.amountReceived) > 0
+){
+  documentState.payments.push({
+    id: 'legacy-' + Date.now(),
+    date:
+      clean(savedSale.paymentDate) ||
+      new Date().toISOString().slice(0,10),
+    amount: money(savedSale.amountReceived),
+    method: clean(savedSale.paymentType) || 'Other',
+    methodKey: 'other',
+    cardType: '',
+    reference: clean(savedSale.reference),
+    receivedBy: clean(savedCustomer.salesperson),
+    status: 'received'
+  });
+}
+
+function saveDocumentState(){
+  localStorage.setItem(
+    quoteStorageKey,
+    JSON.stringify(documentState)
+  );
+}
+
+saveDocumentState();
+
+const quoteDate =
+  new Date(documentState.quoteDate);
 
 const quoteNumber =
-  'HONDA-' +
-  quoteDate.getFullYear() +
-  String(
-    quoteDate.getMonth() + 1
-  ).padStart(2,'0') +
-  String(
-    quoteDate.getDate()
-  ).padStart(2,'0') +
-  '-' +
-  String(
-    quoteDate.getTime()
-  ).slice(-5);
+  documentState.quoteNumber;
 
 document.getElementById(
   'quote-number'
@@ -1159,6 +1568,976 @@ if(savedCustomer.notes){
   ).textContent =
     savedCustomer.notes;
 }
+
+function activePayments(){
+  return documentState.payments.filter(
+    payment => payment.status !== 'voided'
+  );
+}
+
+function totalReceived(){
+  return activePayments().reduce(
+    (total, payment) =>
+      total + money(payment.amount),
+    0
+  );
+}
+
+function currentOrderTotal(){
+  return Math.max(
+    documentState.baseTotal +
+    documentState.priceAdjustment,
+    0
+  );
+}
+
+function paymentClass(methodKey){
+  if([
+    'cash',
+    'bank-check',
+    'check'
+  ].includes(methodKey)){
+    return 'cash';
+  }
+
+  if(methodKey === 'finance'){
+    return 'finance';
+  }
+
+  return 'credit';
+}
+
+function paymentDiscountRate(methodClass){
+  const maximum =
+    money(
+      savedDocument.maximumPaymentDiscountPercent
+    );
+
+  if(methodClass === 'cash'){
+    return maximum;
+  }
+
+  if(methodClass === 'finance'){
+    return Math.max(
+      maximum -
+      money(savedDocument.financeDealerFeePercent),
+      0
+    );
+  }
+
+  return Math.max(
+    maximum -
+    money(savedDocument.creditCardFeePercent || 3),
+    0
+  );
+}
+
+function recalculatePaymentMethodAdjustment(){
+  const remainingPlan = {
+    cash: money(savedPayment.cash),
+    credit: money(savedPayment.credit),
+    finance: money(savedPayment.financed)
+  };
+
+  const actualByClass = {
+    cash: 0,
+    credit: 0,
+    finance: 0
+  };
+
+  const adjustmentSegments = [];
+
+  activePayments().forEach(payment => {
+    const actualClass =
+      paymentClass(payment.methodKey);
+
+    actualByClass[actualClass] +=
+      money(payment.amount);
+
+    const consumeOrder = [
+      actualClass,
+      'cash',
+      'credit',
+      'finance'
+    ].filter(
+      (value,index,array) =>
+        array.indexOf(value) === index
+    );
+
+    let amountLeft = money(payment.amount);
+
+    consumeOrder.forEach(plannedClass => {
+      if(amountLeft <= 0) return;
+
+      const available =
+        Math.max(
+          money(remainingPlan[plannedClass]),
+          0
+        );
+
+      const applied =
+        Math.min(amountLeft, available);
+
+      if(applied <= 0) return;
+
+      const rateDifference =
+        Math.max(
+          paymentDiscountRate(plannedClass) -
+          paymentDiscountRate(actualClass),
+          0
+        );
+
+      if(rateDifference > 0){
+        adjustmentSegments.push({
+          amount: applied,
+          rateDifference
+        });
+      }
+
+      remainingPlan[plannedClass] -= applied;
+      amountLeft -= applied;
+    });
+  });
+
+  let adjustmentBeforeTax = 0;
+
+  visibleLines.forEach(line => {
+    const originalPaymentDiscount =
+      money(line.originalPaymentDiscount);
+
+    if(originalPaymentDiscount <= 0){
+      line.revisedPaymentDiscount = 0;
+      line.paymentMethodAdjustment = 0;
+      return;
+    }
+
+    const lineShare =
+      documentState.baseTotal > 0
+        ? money(line.originalFinalLineTotal) /
+          documentState.baseTotal
+        : 0;
+
+    const rawReduction =
+      adjustmentSegments.reduce(
+        (total,segment) =>
+          total +
+          segment.amount *
+          lineShare *
+          segment.rateDifference /
+          100,
+        0
+      );
+
+    let revisedPaymentDiscount =
+      originalPaymentDiscount;
+
+    if(rawReduction > 0.0001){
+      const remainingSavings =
+        Math.max(
+          originalPaymentDiscount - rawReduction,
+          0
+        );
+
+      revisedPaymentDiscount =
+        remainingSavings >= 10
+          ? Math.floor(
+              (remainingSavings + 0.000001) / 10
+            ) * 10
+          : 0;
+    }
+
+    revisedPaymentDiscount =
+      Math.min(
+        revisedPaymentDiscount,
+        originalPaymentDiscount
+      );
+
+    line.revisedPaymentDiscount =
+      revisedPaymentDiscount;
+
+    line.paymentMethodAdjustment =
+      Math.max(
+        originalPaymentDiscount -
+        revisedPaymentDiscount,
+        0
+      );
+
+    adjustmentBeforeTax +=
+      line.paymentMethodAdjustment;
+  });
+
+  const preTaxTotal =
+    Math.max(
+      documentState.baseTotal -
+      money(savedTotals.salesTax),
+      0
+    );
+
+  const taxRate =
+    savedTotals.taxExempt
+      ? 0
+      : money(savedDocument.taxRate) > 0
+        ? money(savedDocument.taxRate)
+        : preTaxTotal > 0
+          ? money(savedTotals.salesTax) / preTaxTotal
+          : 0;
+
+  const roundedBeforeTax =
+    Math.round(adjustmentBeforeTax * 100) / 100;
+
+  const totalAdjustment =
+    Math.round(
+      roundedBeforeTax *
+      (1 + taxRate) *
+      100
+    ) / 100;
+
+  documentState.paymentAdjustmentBeforeTax =
+    roundedBeforeTax;
+
+  documentState.paymentTaxAdjustment =
+    Math.round(
+      (totalAdjustment - roundedBeforeTax) *
+      100
+    ) / 100;
+
+  documentState.priceAdjustment =
+    totalAdjustment;
+
+  documentState.remainingPaymentPlan =
+    remainingPlan;
+
+  documentState.actualPaymentsByClass =
+    actualByClass;
+}
+
+function renderAdjustedLines(){
+  let adjustedEquipmentTotal = 0;
+  let anyAdjustment = false;
+
+  visibleLines.forEach((line,lineIndex) => {
+    const adjustment =
+      money(line.paymentMethodAdjustment);
+
+    const revisedPaymentDiscount =
+      money(line.revisedPaymentDiscount);
+
+    const revisedTotalDiscount =
+      Math.max(
+        money(line.originalTotalDiscount) -
+        adjustment,
+        0
+      );
+
+    const revisedFinalLineTotal =
+      money(line.originalFinalLineTotal) +
+      adjustment;
+
+    adjustedEquipmentTotal +=
+      revisedFinalLineTotal;
+
+    anyAdjustment =
+      anyAdjustment || adjustment > 0;
+
+    const detailParts = [
+      money(line.factoryRebate) > 0
+        ? 'Factory rebate ' +
+          fmtMoney(line.factoryRebate)
+        : '',
+
+      revisedPaymentDiscount > 0
+        ? 'Payment savings ' +
+          fmtMoney(revisedPaymentDiscount)
+        : '',
+
+      money(line.manualCustomerDiscount) > 0
+        ? 'Customer discount ' +
+          fmtMoney(line.manualCustomerDiscount)
+        : '',
+
+      money(line.bidFleetDiscount) > 0
+        ? 'Bid / Fleet discount ' +
+          fmtMoney(line.bidFleetDiscount)
+        : '',
+
+      adjustment > 0
+        ? 'Payment method adjustment +' +
+          fmtMoney(adjustment)
+        : ''
+    ].filter(Boolean);
+
+    const detailBox =
+      document.getElementById(
+        'quote-line-detail-' + lineIndex
+      );
+
+    detailBox.innerHTML = detailParts.length
+      ? `
+        <div style="
+          margin-top:3px;
+          font-size:10px;
+          line-height:1.25;
+          color:#666;
+        ">
+          ${escapeHtml(detailParts.join(' • '))}
+        </div>
+      `
+      : '';
+
+    const discountBox =
+      document.getElementById(
+        'quote-line-discount-' + lineIndex
+      );
+
+    discountBox.textContent =
+      revisedTotalDiscount > 0
+        ? '-' + fmtMoney(revisedTotalDiscount)
+        : '$0.00';
+
+    discountBox.style.color =
+      revisedTotalDiscount > 0
+        ? '#b00020'
+        : '#111';
+
+    discountBox.style.fontWeight =
+      revisedTotalDiscount > 0
+        ? '900'
+        : '400';
+
+    document.getElementById(
+      'quote-line-final-' + lineIndex
+    ).textContent = line.included
+      ? 'Included'
+      : fmtMoney(revisedFinalLineTotal);
+  });
+
+  itemizedEquipmentTotal =
+    adjustedEquipmentTotal;
+
+  document.getElementById(
+    'quote-equipment-total'
+  ).textContent =
+    fmtMoney(itemizedEquipmentTotal);
+
+  const note =
+    document.getElementById(
+      'quote-payment-adjustment-note'
+    );
+
+  if(note){
+    note.style.display =
+      anyAdjustment ? '' : 'none';
+  }
+}
+
+function paymentMethodLabel(payment){
+  const labels = {
+    cash: 'Cash',
+    'bank-check': 'Bank Check',
+    check: 'Personal / Business Check',
+    'credit-card': 'Credit Card',
+    'debit-card': 'Debit Card',
+    finance: 'Financing',
+    'payment-link': 'Payment Link',
+    other: 'Other'
+  };
+
+  return labels[payment.methodKey] ||
+    clean(payment.method) ||
+    'Other';
+}
+
+function displayPaymentDetails(payment){
+  return [
+    clean(payment.cardType),
+    clean(payment.reference)
+      ? 'Ref: ' + clean(payment.reference)
+      : ''
+  ].filter(Boolean).join(' • ');
+}
+
+function paymentStatusLabel(){
+  const received = totalReceived();
+  const balance = Math.max(
+    currentOrderTotal() - received,
+    0
+  );
+
+  if(!documentState.orderNumber){
+    return 'Quote';
+  }
+
+  if(received <= 0){
+    return 'Sales Order — Payment Due';
+  }
+
+  if(balance <= 0.009){
+    return 'Paid in Full';
+  }
+
+  return activePayments().length === 1
+    ? 'Deposit Received'
+    : 'Partial Payments Received';
+}
+
+function renderPaymentHistory(){
+  const payments = documentState.payments;
+  const dealerBody =
+    document.getElementById('payment-history');
+  const publicBody =
+    document.getElementById('quote-public-payment-history');
+
+  const dealerRows = payments.map(payment => `
+    <tr class="${payment.status === 'voided' ? 'payment-status-voided' : ''}">
+      <td>${escapeHtml(new Date(payment.date + 'T00:00:00').toLocaleDateString())}</td>
+      <td class="num">${fmtMoney(payment.amount)}</td>
+      <td>${escapeHtml(paymentMethodLabel(payment))}</td>
+      <td>${escapeHtml(displayPaymentDetails(payment) || '—')}</td>
+      <td>${escapeHtml(payment.receivedBy || '—')}</td>
+      <td class="${payment.status === 'voided' ? 'payment-status-voided' : 'payment-status-received'}">
+        ${payment.status === 'voided' ? 'Voided' : 'Received'}
+      </td>
+      <td>
+        ${payment.status === 'voided'
+          ? '—'
+          : `
+            <button
+              type="button"
+              class="quote-btn secondary"
+              data-void-payment="${escapeHtml(payment.id)}"
+              style="padding:6px 9px;font-size:11px;">
+              Void
+            </button>
+          `
+        }
+      </td>
+    </tr>
+  `).join('');
+
+  dealerBody.innerHTML = dealerRows;
+
+  document.getElementById(
+    'payment-history-wrap'
+  ).style.display = payments.length ? 'block' : 'none';
+
+  const printablePayments = activePayments();
+
+  publicBody.innerHTML = printablePayments.map(payment => `
+    <tr>
+      <td>${escapeHtml(new Date(payment.date + 'T00:00:00').toLocaleDateString())}</td>
+      <td class="num">${fmtMoney(payment.amount)}</td>
+      <td>${escapeHtml(paymentMethodLabel(payment))}</td>
+      <td>${escapeHtml(displayPaymentDetails(payment) || '—')}</td>
+    </tr>
+  `).join('');
+
+  document.getElementById(
+    'quote-public-payment-table'
+  ).style.display = printablePayments.length ? '' : 'none';
+}
+
+function renderDealerCosts(){
+  const itemCost = visibleLines.reduce((total,line) => {
+    const qty = Number(line.qty) || 1;
+    const item = line.item || {};
+    const unitCost =
+      money(item.SpecialDealerCost) ||
+      money(item.DealerCost) ||
+      money(item.Cost);
+
+    return total + unitCost * qty;
+  },0);
+
+  const cardTotal = activePayments()
+    .filter(payment =>
+      paymentClass(payment.methodKey) === 'credit'
+    )
+    .reduce((total,payment) =>
+      total + money(payment.amount),0
+    );
+
+  const financeTotal = activePayments()
+    .filter(payment =>
+      paymentClass(payment.methodKey) === 'finance'
+    )
+    .reduce((total,payment) =>
+      total + money(payment.amount),0
+    );
+
+  const cardFee =
+    cardTotal *
+    money(savedDocument.creditCardFeePercent || 3) /
+    100;
+
+  const financeFee =
+    financeTotal *
+    money(savedDocument.financeDealerFeePercent) /
+    100;
+
+  const sellingBeforeTax =
+    Math.max(
+      currentOrderTotal() -
+      (
+        money(savedTotals.salesTax) +
+        money(documentState.paymentTaxAdjustment)
+      ),
+      0
+    );
+
+  const grossProfit =
+    sellingBeforeTax - itemCost;
+
+  const netProfit =
+    grossProfit - cardFee - financeFee;
+
+  document.getElementById(
+    'dealer-cost-summary'
+  ).innerHTML = `
+    <div class="cost-summary-row"><span>Recorded Dealer Cost</span><strong>${fmtMoney(itemCost)}</strong></div>
+    <div class="cost-summary-row"><span>Credit/Debit Processing Fees</span><strong>-${fmtMoney(cardFee)}</strong></div>
+    <div class="cost-summary-row"><span>Financing Program Fees</span><strong>-${fmtMoney(financeFee)}</strong></div>
+    <div class="cost-summary-row"><span>Gross Profit Before Payment Fees</span><strong>${fmtMoney(grossProfit)}</strong></div>
+    <div class="cost-summary-row total"><span>Estimated Net Profit</span><strong>${fmtMoney(netProfit)}</strong></div>
+  `;
+}
+
+function renderDocumentState(){
+  recalculatePaymentMethodAdjustment();
+  renderAdjustedLines();
+  saveDocumentState();
+
+  const received = totalReceived();
+  const total = currentOrderTotal();
+  const balance = Math.max(total - received,0);
+  const status = paymentStatusLabel();
+
+  document.getElementById(
+    'quote-total'
+  ).textContent = fmtMoney(total);
+
+  adjustmentRow.style.display = 'none';
+
+  const revisedTax =
+    money(savedTotals.salesTax) +
+    money(documentState.paymentTaxAdjustment);
+
+  if(!savedTotals.taxExempt){
+    document.getElementById(
+      'quote-tax'
+    ).textContent = fmtMoney(revisedTax);
+  }
+
+  const remainingPlan =
+    documentState.remainingPaymentPlan || {
+      cash: 0,
+      credit: 0,
+      finance: 0
+    };
+
+  const actualByClass =
+    documentState.actualPaymentsByClass || {
+      cash: 0,
+      credit: 0,
+      finance: 0
+    };
+
+  const displayedPlan = {
+    cash:
+      money(remainingPlan.cash) +
+      money(actualByClass.cash),
+
+    credit:
+      money(remainingPlan.credit) +
+      money(actualByClass.credit),
+
+    finance:
+      money(remainingPlan.finance) +
+      money(actualByClass.finance)
+  };
+
+  const allocatedPaymentTotal =
+    money(displayedPlan.cash) +
+    money(displayedPlan.credit) +
+    money(displayedPlan.finance);
+
+  const addedBalance =
+    Math.max(
+      currentOrderTotal() -
+      allocatedPaymentTotal,
+      0
+    );
+
+  if(money(remainingPlan.cash) > 0){
+    displayedPlan.cash += addedBalance;
+  }else if(money(remainingPlan.credit) > 0){
+    displayedPlan.credit += addedBalance;
+  }else if(money(remainingPlan.finance) > 0){
+    displayedPlan.finance += addedBalance;
+  }else{
+    const lastPayment =
+      activePayments().slice(-1)[0];
+
+    displayedPlan[
+      lastPayment
+        ? paymentClass(lastPayment.methodKey)
+        : 'cash'
+    ] += addedBalance;
+  }
+
+  document.getElementById(
+    'quote-cash'
+  ).textContent = fmtMoney(displayedPlan.cash);
+
+  document.getElementById(
+    'quote-credit'
+  ).textContent = fmtMoney(displayedPlan.credit);
+
+  document.getElementById(
+    'quote-financed'
+  ).textContent = fmtMoney(displayedPlan.finance);
+
+  document.getElementById(
+    'quote-document-status'
+  ).textContent = status;
+
+  document.getElementById(
+    'quote-document-status'
+  ).classList.toggle(
+    'order',
+    !!documentState.orderNumber
+  );
+
+  document.getElementById(
+    'quote-sale-record-wrap'
+  ).style.display =
+    documentState.orderNumber ? 'block' : 'none';
+
+  document.getElementById(
+    'quote-sale-status'
+  ).textContent = status;
+
+  document.getElementById(
+    'quote-sales-order-number'
+  ).textContent = documentState.orderNumber;
+
+  document.getElementById(
+    'quote-sale-amount-received'
+  ).textContent = fmtMoney(received);
+
+  document.getElementById(
+    'quote-sale-balance-due'
+  ).textContent = fmtMoney(balance);
+
+  let title = 'Itemized Quote';
+
+  if(documentState.orderNumber){
+    title = balance <= 0.009
+      ? 'Sales Order — Paid in Full'
+      : received > 0
+        ? 'Deposit / Payment Receipt'
+        : 'Sales Order Confirmation';
+  }
+
+  document.getElementById(
+    'quote-document-title'
+  ).textContent = title;
+
+  document.title =
+    'West End Power Equipment - ' + title;
+
+  const convertButton =
+    document.getElementById('quote-convert-order');
+
+  if(convertButton){
+    convertButton.disabled =
+      !!documentState.orderNumber;
+    convertButton.textContent =
+      documentState.orderNumber
+        ? 'Sales Order Created'
+        : 'Convert to Sales Order';
+  }
+
+  const paidInFull =
+    !!documentState.orderNumber &&
+    balance <= 0.009;
+
+  [
+    'payment-date',
+    'payment-amount',
+    'payment-method',
+    'payment-card-type',
+    'payment-reference',
+    'payment-received-by'
+  ].forEach(id => {
+    const control =
+      document.getElementById(id);
+
+    if(control){
+      control.disabled = paidInFull;
+    }
+  });
+
+  const recordPaymentButton =
+    document.getElementById(
+      'payment-record-button'
+    );
+
+  if(recordPaymentButton){
+    recordPaymentButton.disabled =
+      paidInFull;
+
+    recordPaymentButton.textContent =
+      paidInFull
+        ? 'Paid in Full — No Balance Due'
+        : 'Record Payment';
+  }
+
+  renderPaymentHistory();
+  renderDealerCosts();
+}
+
+function convertToSalesOrder(){
+  if(!dealerQuoteMode) return;
+
+  const customerName = clean(
+    document.getElementById(
+      'quote-customer-name'
+    ).textContent
+  );
+
+  if(!customerName){
+    alert(
+      'Enter the customer name in the configurator before creating a sales order.'
+    );
+    return;
+  }
+
+  const preparedBy = clean(
+    document.getElementById(
+      'quote-salesperson'
+    ).textContent
+  );
+
+  if(
+    !preparedBy ||
+    preparedBy === 'Not Selected'
+  ){
+    alert(
+      'Select Prepared By in the configurator before creating a sales order.'
+    );
+    return;
+  }
+
+  if(!documentState.orderNumber){
+    documentState.orderNumber =
+      documentNumber('SO-HONDA');
+  }
+
+  renderDocumentState();
+}
+
+function recordPayment(){
+  if(!dealerQuoteMode) return;
+
+  const message =
+    document.getElementById('payment-message');
+
+  if(!documentState.orderNumber){
+    message.textContent =
+      'Convert the quote to a sales order first.';
+    message.style.color = '#b00020';
+    return;
+  }
+
+  const amount = money(
+    document.getElementById('payment-amount').value
+  );
+  const methodKey = clean(
+    document.getElementById('payment-method').value
+  );
+   const cardType = clean(
+    document.getElementById('payment-card-type').value
+  );
+
+  const receivedBy = clean(
+    document.getElementById(
+      'payment-received-by'
+    ).value
+  );
+
+  if(amount <= 0 || !methodKey){
+    message.textContent =
+      'Enter the amount received and payment method.';
+    message.style.color = '#b00020';
+    return;
+  }
+
+if(!receivedBy){
+    message.textContent =
+      'Select or enter who received the payment.';
+    message.style.color = '#b00020';
+    return;
+  }
+
+  if(
+    ['credit-card','debit-card'].includes(methodKey) &&
+    !cardType
+  ){
+    message.textContent = 'Select the card type.';
+    message.style.color = '#b00020';
+    return;
+  }
+
+  const payment = {
+    id: 'PAY-' + Date.now(),
+    date:
+      document.getElementById('payment-date').value ||
+      new Date().toISOString().slice(0,10),
+    amount,
+    methodKey,
+    method: '',
+    cardType,
+    reference: clean(
+      document.getElementById('payment-reference').value
+    ),
+     receivedBy,
+    status: 'received'
+  };
+
+  documentState.payments.push(payment);
+  recalculatePaymentMethodAdjustment();
+
+  if(totalReceived() > currentOrderTotal() + 0.009){
+    documentState.payments.pop();
+    recalculatePaymentMethodAdjustment();
+    message.textContent =
+      'That payment exceeds the current balance due.';
+    message.style.color = '#b00020';
+    return;
+  }
+
+  document.getElementById('payment-amount').value = '';
+  document.getElementById('payment-method').value = '';
+  document.getElementById('payment-card-type').value = '';
+  document.getElementById('payment-card-type-wrap').style.display = 'none';
+  document.getElementById('payment-reference').value = '';
+
+  message.textContent = 'Payment recorded successfully.';
+  message.style.color = '#17652d';
+
+  renderDocumentState();
+}
+
+function voidPayment(paymentId){
+  if(!dealerQuoteMode) return;
+
+  const payment =
+    documentState.payments.find(
+      item => item.id === paymentId
+    );
+
+  if(!payment || payment.status === 'voided'){
+    return;
+  }
+
+  const approved = window.confirm(
+    'Void this payment record? The entry will remain visible in the dealer payment history.'
+  );
+
+  if(!approved) return;
+
+  payment.status = 'voided';
+  payment.voidedAt = new Date().toISOString();
+
+  document.getElementById(
+    'payment-message'
+  ).textContent = 'Payment voided.';
+
+  document.getElementById(
+    'payment-message'
+  ).style.color = '#b00020';
+
+  renderDocumentState();
+}
+
+function hideDealerCosts(){
+  const panel =
+    document.getElementById('dealer-cost-panel');
+  const button =
+    document.getElementById('quote-toggle-costs');
+
+  if(panel) panel.style.display = 'none';
+  if(button) button.textContent = 'View Costs & Profit';
+}
+
+function toggleDealerCosts(){
+  if(!dealerQuoteMode) return;
+
+  const panel =
+    document.getElementById('dealer-cost-panel');
+  const button =
+    document.getElementById('quote-toggle-costs');
+  const opening = panel.style.display !== 'block';
+
+  panel.style.display = opening ? 'block' : 'none';
+  button.textContent = opening
+    ? 'Hide Costs & Profit'
+    : 'View Costs & Profit';
+}
+
+function printCustomerDocument(){
+  hideDealerCosts();
+  renderDocumentState();
+  window.print();
+}
+
+window.addEventListener('beforeprint', hideDealerCosts);
+
+if(dealerQuoteMode){
+  document.getElementById(
+    'quote-convert-order'
+  ).addEventListener('click', convertToSalesOrder);
+
+  document.getElementById(
+    'quote-toggle-costs'
+  ).addEventListener('click', toggleDealerCosts);
+
+  document.getElementById(
+    'payment-record-button'
+  ).addEventListener('click', recordPayment);
+
+  document.getElementById(
+    'payment-history'
+  ).addEventListener('click', event => {
+    const button =
+      event.target.closest('[data-void-payment]');
+
+    if(!button) return;
+
+    voidPayment(
+      button.getAttribute('data-void-payment')
+    );
+  });
+
+  document.getElementById(
+    'payment-method'
+  ).addEventListener('change', event => {
+    document.getElementById(
+      'payment-card-type-wrap'
+    ).style.display =
+      ['credit-card','debit-card'].includes(event.target.value)
+        ? 'block'
+        : 'none';
+  });
+
+  document.getElementById('payment-date').value =
+    new Date().toISOString().slice(0,10);
+
+  document.getElementById('payment-received-by').value =
+    savedCustomer.salesperson || '';
+}
+
+renderDocumentState();
 
   </script>
 
