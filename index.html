@@ -8347,17 +8347,81 @@ const salesperson = clean($('stihl-salesperson')?.value);
 const printFinanceProgram =
   selectedPaymentProgram();
 
-  const customerName = clean($('stihl-customer-name')?.value);
-  const businessName = clean($('stihl-business-name')?.value);
-  const customerPhone = clean($('stihl-customer-contact')?.value);
-  const customerEmail = clean($('stihl-customer-email')?.value);
+  const customerName =
+    clean($('stihl-customer-name')?.value);
+
+  const businessName =
+    clean($('stihl-business-name')?.value);
+
+  const customerPhone =
+    clean($('stihl-customer-contact')?.value);
+
+  const customerAltPhone =
+    clean($('stihl-alt-phone')?.value);
+
+  const customerStreet =
+    clean($('stihl-street-address')?.value);
+
+  const customerCity =
+    clean($('stihl-city')?.value);
+
+  const customerState =
+    clean($('stihl-state')?.value);
+
+  const customerZip =
+    clean($('stihl-zip')?.value);
+
+  const customerEmail =
+    clean($('stihl-customer-email')?.value);
+
+  const quoteNotes =
+    clean($('stihl-quote-notes')?.value);
+
+  const customerCityStateZip = [
+    customerCity,
+    customerState,
+    customerZip
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   const customerBlock = `
-    <div style="font-size:12px;line-height:1.5;">
-      ${customerName ? `<strong>Customer:</strong> ${escapeHtml(customerName)}<br>` : ''}
-      ${businessName ? `<strong>Business:</strong> ${escapeHtml(businessName)}<br>` : ''}
-      ${customerPhone ? `<strong>Phone:</strong> ${escapeHtml(customerPhone)}<br>` : ''}
-      ${customerEmail ? `<strong>Email:</strong> ${escapeHtml(customerEmail)}<br>` : ''}
+    <div style="
+      font-size:12px;
+      line-height:1.5;
+      margin-top:8px;
+    ">
+      ${customerName
+        ? `<strong>Customer:</strong> ${escapeHtml(customerName)}<br>`
+        : ''}
+
+      ${businessName
+        ? `<strong>Business:</strong> ${escapeHtml(businessName)}<br>`
+        : ''}
+
+      ${customerStreet
+        ? `<strong>Address:</strong> ${escapeHtml(customerStreet)}<br>`
+        : ''}
+
+      ${customerCityStateZip
+        ? `${escapeHtml(customerCityStateZip)}<br>`
+        : ''}
+
+      ${customerPhone
+        ? `<strong>Phone:</strong> ${escapeHtml(customerPhone)}<br>`
+        : ''}
+
+      ${customerAltPhone
+        ? `<strong>Alt. Phone:</strong> ${escapeHtml(customerAltPhone)}<br>`
+        : ''}
+
+      ${customerEmail
+        ? `<strong>Email:</strong> ${escapeHtml(customerEmail)}<br>`
+        : ''}
+
+      ${quoteNotes
+        ? `<strong>Notes:</strong> ${escapeHtml(quoteNotes)}<br>`
+        : ''}
     </div>
   `;
 
