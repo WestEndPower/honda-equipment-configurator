@@ -411,6 +411,8 @@ body.dealer-mode .dealer-only{
   background:#1f7a3a;
 }
 
+.stihl-webpage-modal textarea{width:100%;min-height:38vh;resize:vertical;padding:12px;border:1px solid #aaa;border-radius:8px;background:#f7f7f7;font:12px/1.45 Consolas,Monaco,monospace}.stihl-webpage-modal .stihl-dealer-box{width:min(940px,calc(100vw - 28px));max-height:92vh;overflow:auto}.stihl-webpage-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0}.stihl-webpage-report{max-height:150px;overflow:auto;font-size:12px}@media(max-width:700px){.stihl-webpage-fields{grid-template-columns:1fr}}
+
 .stihl-dealer-modal{
   display:none;
   position:fixed;
@@ -642,6 +644,23 @@ body.dealer-mode .dealer-only{
 
     </div>
 
+</div>
+
+<div id="stihl-webpage-modal" class="stihl-dealer-modal stihl-webpage-modal">
+  <div class="stihl-dealer-box">
+    <h3 style="margin-top:0;">Build / Update Dealer Spike Webpage</h3>
+    <div class="stihl-webpage-fields">
+      <div><label for="stihl-webpage-category">Category</label><select id="stihl-webpage-category"></select></div>
+      <div><label for="stihl-webpage-filter">Products</label><select id="stihl-webpage-filter"><option value="stock">In Stock</option><option value="active">All Active</option></select></div>
+      <div><label for="stihl-webpage-filename">Page File Name</label><input id="stihl-webpage-filename" value="honda-snow-blowers-in-stock-ct"></div>
+      <div><label for="stihl-webpage-url">Published Page URL</label><input id="stihl-webpage-url" value="https://www.westendpower.com/honda-snow-blowers-in-stock-ct"></div>
+    </div>
+    <button class="stihl-btn" id="stihl-generate-webpage" type="button">Generate Page</button>
+    <div id="stihl-webpage-status" class="stihl-note">Choose a category and generate the current page.</div>
+    <div id="stihl-webpage-report" class="stihl-webpage-report"></div>
+    <textarea id="stihl-webpage-code" spellcheck="false" aria-label="Generated Dealer Spike HTML"></textarea>
+    <div class="stihl-btn-row" style="margin-top:12px;"><button class="stihl-btn" id="stihl-copy-webpage" type="button">Copy Dealer Spike Code</button><button class="stihl-btn light" id="stihl-download-webpage" type="button">Download HTML</button><button class="stihl-btn light" id="stihl-close-webpage" type="button">Close</button></div>
+  </div>
 </div>
   <!-- =========================================================
        SECTION START: HONDA POWER EQUIPMENT CONFIGURATOR HERO
@@ -1265,6 +1284,10 @@ body.dealer-mode .dealer-only{
      ">
     Quote<br>Dashboard
   </a>
+
+  <button id="stihl-build-webpages" type="button" class="stihl-btn light" style="grid-column:1/-1;justify-content:center;width:100%;min-height:48px;font-size:12px;line-height:1.15;">
+    Build / Update<br>Webpages
+  </button>
 
 </div>
 
@@ -16017,6 +16040,96 @@ renderFinancingOptions();
     function escapeHtml(str){
       return clean(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
     }
+
+const HONDA_PUBLIC_CONFIG_URL='https://westendpower.github.io/honda-equipment-configurator/';
+
+function webpageProducts(){
+  const category=clean($('stihl-webpage-category')?.value);
+  const stockOnly=clean($('stihl-webpage-filter')?.value)==='stock';
+  return state.tools.filter(item=>{
+    if(clean(item.Category)!==category) return false;
+    if(clean(item.Active)!==''&&!isTrue(item.Active)) return false;
+    if(clean(item.DisplayAvailability)!==''&&!isTrue(item.DisplayAvailability)) return false;
+    return !stockOnly||(Number(clean(item.QtyNewMilford))||0)>0||(Number(clean(item.QtyDanbury))||0)>0;
+  }).sort(sortByOrder);
+}
+
+function webpageSpecs(item){
+  const rows=[];
+  for(let i=1;i<=10;i++){
+    const label=clean(item[`SpecLabel${i}`]);
+    const value=clean(item[`SpecValue${i}`]);
+    if(label&&value) rows.push([label,value]);
+  }
+  return rows.slice(0,6);
+}
+
+function webpageSlug(value){
+  return clean(value).toLowerCase().replace(/&/g,' and ').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+}
+
+function populateWebpageCategories(){
+  const select=$('stihl-webpage-category');
+  const categories=[...new Set(state.tools.map(item=>clean(item.Category)).filter(Boolean))].sort();
+  select.innerHTML=categories.map(category=>`<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`).join('');
+  if(categories.includes('Snow Blowers')) select.value='Snow Blowers';
+}
+
+function updateWebpageDefaults(){
+  const category=clean($('stihl-webpage-category')?.value)||'Equipment';
+  const slug=`honda-${webpageSlug(category)}-in-stock-ct`;
+  $('stihl-webpage-filename').value=slug;
+  $('stihl-webpage-url').value=`https://www.westendpower.com/${slug}`;
+}
+
+function generateDealerSpikeWebpage(){
+  const category=clean($('stihl-webpage-category')?.value);
+  const products=webpageProducts();
+  if(!products.length){
+    $('stihl-webpage-status').className='stihl-error';
+    $('stihl-webpage-status').textContent='No matching active products were found.';
+    $('stihl-webpage-code').value='';
+    return;
+  }
+  const missingImages=products.filter(item=>!imageOf(item)).map(skuOf);
+  const missingUrls=products.filter(item=>!clean(item.ProductURL)).map(skuOf);
+  const missingSpecs=products.filter(item=>!webpageSpecs(item).length).map(skuOf);
+  const cards=products.map(item=>{
+    const sku=skuOf(item),model=clean(item.Model),image=imageOf(item),details=clean(item.ProductURL);
+    const configure=`${HONDA_PUBLIC_CONFIG_URL}?category=${encodeURIComponent(category)}&sku=${encodeURIComponent(sku)}&v=eacc4ea`;
+    const price=`${HONDA_PUBLIC_CONFIG_URL}price-tags/${encodeURIComponent(sku)}.pdf`;
+    const specs=webpageSpecs(item).map(([label,value])=>`<li><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span></li>`).join('');
+    return `<article class="wep-card"><div class="wep-media">${image?`<img src="${escapeHtml(image)}" alt="Honda ${escapeHtml(model)} ${escapeHtml(category)}" loading="lazy">`:`<div class="wep-placeholder"><strong>${escapeHtml(model)}</strong><br>Image Coming Soon</div>`}<span>In Stock</span></div><div class="wep-body"><h3>${escapeHtml(displayProductTitle(item))}</h3>${specs?`<ul class="wep-specs">${specs}</ul>`:''}<p><strong>Availability:</strong> New Milford ${(Number(clean(item.QtyNewMilford))||0)>0?'✓':'—'} &nbsp; Danbury ${(Number(clean(item.QtyDanbury))||0)>0?'✓':'—'}</p><div class="wep-actions"><a class="primary" href="${price}" target="_blank" rel="noopener">View Price &amp; Payment Options</a><a href="${configure}" target="_blank" rel="noopener">Configure This Model</a>${details?`<a href="${escapeHtml(details)}" target="_blank" rel="noopener">Honda Model Details</a>`:''}</div><small>SKU ${escapeHtml(sku)}</small></div></article>`;
+  }).join('');
+  const pageUrl=clean($('stihl-webpage-url').value);
+  const html=`<!-- Generated by West End Power Honda Configurator ${new Date().toLocaleString()} --><style>.wep-page{max-width:1180px;margin:auto;font:16px/1.5 Arial,sans-serif;color:#171717}.wep-hero{padding:34px 22px;border-radius:16px;background:#202020;color:#fff;text-align:center}.wep-hero h2{font-size:clamp(28px,5vw,46px);margin:0 0 10px}.wep-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px;margin:28px 0}.wep-card{overflow:hidden;border:1px solid #ccc;border-top:6px solid #c8102e;border-radius:14px;background:#fff}.wep-media{position:relative;min-height:260px;display:flex;align-items:center;justify-content:center;background:#f5f5f5}.wep-media img{width:100%;height:300px;object-fit:contain}.wep-media>span{position:absolute;right:12px;top:12px;background:#287a32;color:#fff;border-radius:20px;padding:6px 10px;font-weight:800}.wep-placeholder{text-align:center;font-size:22px}.wep-body{padding:20px}.wep-specs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0;list-style:none}.wep-specs li{padding:8px;border:1px solid #ddd;border-radius:7px;text-align:center}.wep-specs strong,.wep-specs span{display:block}.wep-specs span{font-size:11px}.wep-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0}.wep-actions a{display:flex;align-items:center;justify-content:center;min-height:46px;border:2px solid #171717;border-radius:7px;padding:8px;text-decoration:none;font-weight:800;text-align:center}.wep-actions .primary{grid-column:1/-1;background:#c8102e;color:#fff}@media(max-width:760px){.wep-grid{grid-template-columns:1fr}.wep-specs{grid-template-columns:repeat(2,1fr)}}</style><div class="wep-page"><section class="wep-hero"><p>Available in New Milford &amp; Danbury, Connecticut</p><h2>Honda ${escapeHtml(category)} In Stock at West End Power</h2><p>Compare current inventory, product details and payment options, then configure the exact model online.</p></section><div class="wep-grid">${cards}</div><section class="wep-hero"><h2>Need Help Choosing?</h2><p>Call New Milford at 860-355-8722 or Danbury at 203-792-3030.</p></section><p style="font-size:12px">Inventory and pricing are subject to change until confirmed. Page: ${escapeHtml(pageUrl)}</p></div>`;
+  $('stihl-webpage-code').value=html;
+  $('stihl-webpage-status').className='stihl-success';
+  $('stihl-webpage-status').textContent=`Webpage ready: ${products.length} ${category} product${products.length===1?'':'s'}.`;
+  const report=[];
+  if(missingImages.length) report.push(`<strong>Missing ImageURL:</strong> ${missingImages.join(', ')}`);
+  if(missingUrls.length) report.push(`<strong>Missing ProductURL (details button hidden):</strong> ${missingUrls.join(', ')}`);
+  if(missingSpecs.length) report.push(`<strong>Missing specifications:</strong> ${missingSpecs.join(', ')}`);
+  report.push(`<strong>Expected price-tag PDFs:</strong> ${products.map(item=>`${skuOf(item)}.pdf`).join(', ')}`);
+  $('stihl-webpage-report').innerHTML=report.map(row=>`<div class="stihl-note">${row}</div>`).join('');
+}
+
+async function copyDealerSpikeWebpage(){
+  const code=$('stihl-webpage-code');
+  if(!clean(code.value)) return;
+  try{await navigator.clipboard.writeText(code.value);}catch(error){code.focus();code.select();document.execCommand('copy');}
+  $('stihl-webpage-status').textContent='Dealer Spike code copied.';
+}
+
+function downloadDealerSpikeWebpage(){
+  const html=$('stihl-webpage-code').value;
+  if(!clean(html)) return;
+  const link=document.createElement('a');
+  link.href=URL.createObjectURL(new Blob([html],{type:'text/html;charset=utf-8'}));
+  link.download=`${webpageSlug($('stihl-webpage-filename').value)||'honda-webpage'}.html`;
+  link.click();
+  setTimeout(()=>URL.revokeObjectURL(link.href),1000);
+}
 /* ==========================
    Dealer Mode
 ========================== */
@@ -16152,6 +16265,34 @@ function mergePrivateRows(targetRows, privateRows, privateKey, targetKeys){
       ){
         delete valuesToApply.SKU;
       }
+
+      /*
+        Public merchandising fields are maintained in the public
+        product export. A blank private value must not erase them
+        when Dealer Mode data is merged.
+      */
+      const preservePublicFields = [
+        'ImageURL',
+        'ProductURL',
+        'ManualURL',
+        'InventoryURL',
+        ...Array.from(
+          {length:10},
+          (_,index) => [
+            `SpecLabel${index + 1}`,
+            `SpecValue${index + 1}`
+          ]
+        ).flat()
+      ];
+
+      preservePublicFields.forEach(field => {
+        if(
+          clean(target[field]) &&
+          !clean(valuesToApply[field])
+        ){
+          delete valuesToApply[field];
+        }
+      });
 
       Object.assign(
         target,
@@ -16389,6 +16530,20 @@ function bindDealerMode(){
   $("dealerModeModal").addEventListener("click", function(e){
     if(e.target === $("dealerModeModal")) closeDealer();
   });
+
+  $("stihl-build-webpages")?.addEventListener("click",()=>{
+    populateWebpageCategories();
+    updateWebpageDefaults();
+    $("stihl-webpage-code").value='';
+    $("stihl-webpage-report").innerHTML='';
+    $("stihl-webpage-modal").style.display='flex';
+  });
+  $("stihl-webpage-category")?.addEventListener("change",updateWebpageDefaults);
+  $("stihl-generate-webpage")?.addEventListener("click",generateDealerSpikeWebpage);
+  $("stihl-copy-webpage")?.addEventListener("click",copyDealerSpikeWebpage);
+  $("stihl-download-webpage")?.addEventListener("click",downloadDealerSpikeWebpage);
+  $("stihl-close-webpage")?.addEventListener("click",()=>{$("stihl-webpage-modal").style.display='none';});
+  $("stihl-webpage-modal")?.addEventListener("click",event=>{if(event.target===$("stihl-webpage-modal")) $("stihl-webpage-modal").style.display='none';});
 
 }
     async function startConfigurator(){
