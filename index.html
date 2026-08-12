@@ -5110,6 +5110,57 @@ renderAllOptions();
 bindEvents();
 
 /*
+  Public webpage deep links. Opens the requested category and
+  exact product when a URL contains ?category=...&sku=...
+*/
+const publicLinkParameters =
+  new URLSearchParams(window.location.search);
+
+const publicLinkCategory =
+  clean(publicLinkParameters.get('category'));
+
+const publicLinkSKU =
+  clean(publicLinkParameters.get('sku'));
+
+if(publicLinkCategory && $('stihl-category')){
+  const categoryOption =
+    Array.from($('stihl-category').options)
+      .find(option =>
+        clean(option.value).toUpperCase() ===
+        publicLinkCategory.toUpperCase()
+      );
+
+  if(categoryOption){
+    $('stihl-category').value = categoryOption.value;
+    renderTools();
+  }
+}
+
+if(publicLinkSKU && $('stihl-tool-select')){
+  const linkedTool = state.tools.find(tool =>
+    clean(skuOf(tool)).toUpperCase() ===
+    publicLinkSKU.toUpperCase()
+  );
+
+  if(linkedTool){
+    if(clean(linkedTool.Category) && $('stihl-category')){
+      $('stihl-category').value = clean(linkedTool.Category);
+      renderTools();
+    }
+
+    $('stihl-tool-select').value = skuOf(linkedTool);
+    selectTool();
+
+    setTimeout(() => {
+      $('stihl-tool-details')?.scrollIntoView({
+        behavior:'smooth',
+        block:'start'
+      });
+    }, 150);
+  }
+}
+
+/*
   Batch price-tag mode is used by Publish-PriceTags.ps1.
   It renders the selected product directly in this browser tab so
   Microsoft Edge can save the finished page as a PDF.
