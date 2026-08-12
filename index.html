@@ -6248,6 +6248,17 @@ salesTax:
       }
     };
 
+    quoteData.dealerSessionToken =
+      document.body.classList.contains(
+        "dealer-mode"
+      )
+        ? clean(
+            sessionStorage.getItem(
+              "hondaDealerSessionToken"
+            )
+          )
+        : "";
+
     sessionStorage.setItem(
       'stihlQuoteData',
       JSON.stringify(quoteData)
@@ -16267,6 +16278,11 @@ async function unlockDealer(){
       return;
     }
 
+    sessionStorage.setItem(
+      "hondaDealerSessionToken",
+      clean(result.dealerSessionToken)
+    );
+
     applyPrivateDealerData(
       result.data || {}
     );
@@ -16296,7 +16312,11 @@ async function unlockDealer(){
 function bindDealerMode(){
 
   sessionStorage.removeItem("dealerMode");
-dealerMode(false);
+  sessionStorage.removeItem(
+    "hondaDealerSessionToken"
+  );
+
+  dealerMode(false);
 
   $("dealerModeBtn").addEventListener("click", function(){
 

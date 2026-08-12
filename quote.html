@@ -711,6 +711,18 @@ td{
   sessionStorage.getItem('stihlQuoteData') || '{}'
 );
 
+const CONFIGURATOR_API =
+  "https://westendpower-configurator-api.westendpower-nm.workers.dev";
+
+const dealerSessionToken =
+  String(
+    quoteData.dealerSessionToken ||
+    sessionStorage.getItem(
+      "hondaDealerSessionToken"
+    ) ||
+    ""
+  ).trim();
+
 const state =
   quoteData.state || {};
 
@@ -1462,6 +1474,186 @@ function saveDocumentState(){
 }
 
 saveDocumentState();
+
+async function syncDealerQuoteState(){
+
+  if(
+    !dealerQuoteMode ||
+    !dealerSessionToken
+  ){
+    return false;
+  }
+
+  const amountReceived =
+    totalReceived();
+
+  const balanceDue =
+    Math.max(
+      currentOrderTotal() -
+      amountReceived,
+      0
+    );
+
+  const status =
+    !documentState.orderNumber
+      ? "Open"
+      : (
+          amountReceived > 0 &&
+          balanceDue <= 0.009
+            ? "Sold"
+            : "Ordered"
+        );
+
+  const customerAddress = [
+    clean(savedCustomer.street),
+    [
+      clean(savedCustomer.city),
+      clean(savedCustomer.state),
+      clean(savedCustomer.zip)
+    ].filter(Boolean).join(" ")
+  ].filter(Boolean).join(", ");
+
+  try{
+
+    const response =
+      await fetch(
+        CONFIGURATOR_API +
+        "/dealer-quote-state",
+        {
+          method:"POST",
+
+          headers:{
+            "Content-Type":
+              "application/json",
+
+            "X-Dealer-Session":
+              dealerSessionToken
+          },
+
+          body:JSON.stringify({
+            quoteNumber:
+              documentState.quoteNumber,
+
+            orderNumber:
+              documentState.orderNumber,
+
+            status,
+
+            salesperson:
+              clean(savedCustomer.salesperson),
+
+            customer:
+              clean(savedCustomer.name),
+
+            business:
+              clean(savedCustomer.business),
+
+            phone:
+              clean(savedCustomer.phone),
+
+            altPhone:
+              clean(savedCustomer.altPhone),
+
+            email:
+              clean(savedCustomer.email),
+
+            address:
+              customerAddress,
+
+            delivery:
+              clean(
+                savedTotals.deliveryDescription
+              ),
+
+            payment:
+              clean(
+                savedPayment.program
+              ),
+
+            selectedTool:
+              visibleLines
+                .map(line =>
+                  itemName(line.item)
+                )
+                .join(" | "),
+
+            subtotal:
+              fmtMoney(
+                savedTotals.equipmentSubtotal
+              ),
+
+            tax:
+              fmtMoney(
+                savedTotals.salesTax
+              ),
+
+            total:
+              fmtMoney(
+                currentOrderTotal()
+              ),
+
+            amountReceived,
+            balanceDue,
+
+            payments:
+              documentState.payments,
+
+            payload:{
+              items:
+                visibleLines.map(line => ({
+                  qty:
+                    Number(line.qty) || 1,
+
+                  sku:
+                    itemSku(line.item),
+
+                  name:
+                    itemName(line.item),
+
+                  lineTotal:
+                    money(
+                      line.finalLineTotal
+                    )
+                })),
+
+              notes:
+                clean(savedCustomer.notes)
+            }
+          }),
+
+          cache:"no-store"
+        }
+      );
+
+    const result =
+      await response.json()
+        .catch(() => ({}));
+
+    if(!response.ok){
+      throw new Error(
+        result.error ||
+        "Database update failed."
+      );
+    }
+
+    return true;
+
+  }catch(error){
+
+    console.error(
+      "Sales dashboard update failed:",
+      error
+    );
+
+    alert(
+      "The document was saved on this computer, " +
+      "but the Sales Dashboard was not updated.\n\n" +
+      error.message
+    );
+
+    return false;
+  }
+}
 
 const quoteDate =
   new Date(documentState.quoteDate);
@@ -2341,7 +2533,7 @@ function renderDocumentState(){
   renderDealerCosts();
 }
 
-function convertToSalesOrder(){
+async function convertToSalesOrder(){
   if(!dealerQuoteMode) return;
 
   const customerName = clean(
@@ -2379,9 +2571,11 @@ function convertToSalesOrder(){
   }
 
   renderDocumentState();
+
+  await syncDealerQuoteState();
 }
 
-function recordPayment(){
+async function recordPayment(){
   if(!dealerQuoteMode) return;
 
   const message =
@@ -2471,9 +2665,11 @@ if(!receivedBy){
   message.style.color = '#17652d';
 
   renderDocumentState();
+
+  await syncDealerQuoteState();
 }
 
-function voidPayment(paymentId){
+async function voidPayment(paymentId){
   if(!dealerQuoteMode) return;
 
   const payment =
@@ -2503,6 +2699,8 @@ function voidPayment(paymentId){
   ).style.color = '#b00020';
 
   renderDocumentState();
+
+  await syncDealerQuoteState();
 }
 
 function hideDealerCosts(){
@@ -2583,6 +2781,10 @@ if(dealerQuoteMode){
 }
 
 renderDocumentState();
+
+if(dealerQuoteMode){
+  syncDealerQuoteState();
+}
 
   </script>
 
