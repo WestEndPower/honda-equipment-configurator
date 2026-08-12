@@ -223,6 +223,8 @@ td{
   line-height:1.15;
 }
 
+   @media print{
+
   @page{
     size:letter;
     margin:0.5in;
@@ -516,7 +518,7 @@ td{
   </tr>
 </table>
 
-<div style="
+<div id="quote-payment-breakdown" style="
   margin-top:28px;
   border:1px solid #ddd;
   border-radius:10px;
@@ -529,21 +531,21 @@ td{
     padding:10px 14px;
     font-weight:900;
   ">
-    Payment Breakdown
+    Customer Selected Payment Option
   </div>
 
   <table style="margin-top:0;">
-    <tr>
+    <tr id="quote-cash-row">
       <td>Cash / Bank Check</td>
       <td class="num" id="quote-cash">$0.00</td>
     </tr>
 
-    <tr>
+   <tr id="quote-credit-row">
       <td>Credit Card</td>
       <td class="num" id="quote-credit">$0.00</td>
     </tr>
 
-    <tr>
+     <tr id="quote-financed-row">
   <td>Amount Financed</td>
   <td class="num" id="quote-financed">$0.00</td>
 </tr>
@@ -558,12 +560,12 @@ td{
   <td class="num" id="quote-principal">$0.00</td>
 </tr>
 
-<tr>
+<tr id="quote-program-row">
   <td>Financing Program</td>
   <td class="num" id="quote-program">None Selected</td>
 </tr>
 
-    <tr>
+    <tr id="quote-monthly-row">
       <td>Estimated Monthly Payment</td>
       <td class="num" id="quote-monthly">$0.00</td>
     </tr>
@@ -1491,6 +1493,49 @@ document.getElementById(
   'quote-financed'
 ).textContent =
   fmtMoney(savedPayment.financed);
+
+const selectedCash =
+  money(savedPayment.cash);
+
+const selectedCredit =
+  money(savedPayment.credit);
+
+const selectedFinanced =
+  money(savedPayment.financed);
+
+document.getElementById(
+  'quote-cash-row'
+).style.display =
+  selectedCash > 0 ? '' : 'none';
+
+document.getElementById(
+  'quote-credit-row'
+).style.display =
+  selectedCredit > 0 ? '' : 'none';
+
+document.getElementById(
+  'quote-financed-row'
+).style.display =
+  selectedFinanced > 0 ? '' : 'none';
+
+document.getElementById(
+  'quote-program-row'
+).style.display =
+  selectedFinanced > 0 ? '' : 'none';
+
+document.getElementById(
+  'quote-monthly-row'
+).style.display =
+  selectedFinanced > 0 ? '' : 'none';
+
+document.getElementById(
+  'quote-payment-breakdown'
+).style.display =
+  selectedCash > 0 ||
+  selectedCredit > 0 ||
+  selectedFinanced > 0
+    ? 'block'
+    : 'none';
 
   const applicationFee =
   money(savedPayment.applicationFee);
