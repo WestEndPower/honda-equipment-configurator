@@ -1477,10 +1477,15 @@ saveDocumentState();
 
 async function syncDealerQuoteState(){
 
-  if(
-    !dealerQuoteMode ||
-    !dealerSessionToken
-  ){
+  if(!dealerQuoteMode){
+    return false;
+  }
+
+  if(!dealerSessionToken){
+    alert(
+      "The sales order was created locally, but it was not saved to the dashboard.\n\n" +
+      "Return to the configurator, unlock Dealer Mode again, and reopen this quote."
+    );
     return false;
   }
 
