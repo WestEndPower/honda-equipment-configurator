@@ -89,6 +89,8 @@ const requiredIndexMarkers = [
   "searchInput.removeAttribute('readonly');",
   "searchInput.value = '';",
   'Print Runtime Chart',
+  "if(appliesTo === 'BRANDID')",
+  'rule.AppliesToValue',
   'fallbackBrandId + \'ATTACHMENT\'',
   'fallbackBrandId + \'ACCESSORY\''
 ];

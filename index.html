@@ -12513,7 +12513,33 @@ const maxQty = Number(clean(
   return true;
 }
 
-function freightRuleMatchesGroup(rule, group){
+function freightRuleMatchesGroup(
+  rule,
+  group,
+  item
+){
+  const appliesTo =
+    freightKey(rule.AppliesTo);
+
+  if(appliesTo === 'BRANDID'){
+    const requiredBrand =
+      freightKey(
+        rule.AppliesToValue ||
+        rule.BrandID
+      );
+
+    const itemBrand =
+      freightKey(
+        item?.BrandID ||
+        configuratorBrandId()
+      );
+
+    return (
+      requiredBrand !== '' &&
+      requiredBrand === itemBrand
+    );
+  }
+
   const ruleGroup =
     freightKey(
       rule.FreightGroup ||
