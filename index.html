@@ -4465,6 +4465,7 @@ function uniqueFinancePrograms(programs){
     ].join('|');
 
     if(seen.has(key)) return false;
+
     seen.add(key);
     return true;
   });
@@ -6044,10 +6045,14 @@ Brand: clean(program.BrandID),
   PaymentOptionID: clean(program.ProgramID),
   Label: clean(program.ProgramName),
 
-  ApplicationFee:
+    ApplicationFee:
     clean(program.FinanceType).toUpperCase() === 'REVOLVING'
       ? clean(program.CustomerOriginationFee)
-      : clean(program.UCCFilingFee),
+      : (
+          clean(program.UCCFilingFee) !== ''
+            ? clean(program.UCCFilingFee)
+            : clean(program.CustomerOriginationFee)
+        ),
 
   MinimumDownAmount:
     clean(program.MinDownAmount),
@@ -14681,7 +14686,47 @@ const toolBrand =
 
   if(!brandMatches) return false;
 
+    /*
+    A same-brand finance program is brand-wide when
+    its exported row contains no equipment-group,
+    SKU, or model restriction columns.
+
+    This supports Honda's brand-wide Sheffield
+    programs while preserving explicit restrictions
+    used by other brands.
+  */
+  const programKeys =
+    Object.keys(program || {});
+
+  const hasExplicitEquipmentRestrictions =
+    clean(program.FinanceBulletinGroup) !== '' ||
+    programKeys.some(key =>
+      clean(key)
+        .toUpperCase()
+        .startsWith('GROUP_')
+    ) ||
+    (
+      sku &&
+      programKeys.some(key =>
+        clean(key).toUpperCase() ===
+        sku.toUpperCase()
+      )
+    ) ||
+    (
+      model &&
+      programKeys.some(key =>
+        clean(key).toUpperCase() ===
+        model.toUpperCase()
+      )
+    );
+
+  const brandWideProgram =
+    brandMatches &&
+    programBrand !== '' &&
+    !hasExplicitEquipmentRestrictions;
+
   const equipmentMatches =
+    brandWideProgram ||
     financeProgramGroupMatches(program, tool) ||
     programFlag('AllProducts') ||
     groupColumns.some(programFlag) ||
