@@ -324,6 +324,27 @@ td{
           id="quote-toggle-costs">
           View Costs &amp; Profit
         </button>
+
+        <button
+          type="button"
+          class="quote-btn secondary"
+          id="quote-sync-dashboard">
+          Update Dashboard
+        </button>
+      </div>
+      <div
+        id="quote-sync-dashboard-message"
+        style="margin-top:8px;font-size:12px;font-weight:800;">
+      </div>
+      <div style="margin-top:10px;max-width:360px;">
+        <label for="quote-order-number-control" style="font-weight:900;">
+          Sales Order Number
+        </label>
+        <input
+          id="quote-order-number-control"
+          type="text"
+          style="width:100%;margin-top:4px;"
+          placeholder="SO-YANMAR-YYYYMMDD-00000">
       </div>
       <div style="margin-top:8px;font-size:11px;color:#666;">
         Dealer controls and financial information never print on customer documents.
@@ -545,6 +566,16 @@ td{
       <td class="num" id="quote-credit">$0.00</td>
     </tr>
 
+    <tr id="quote-required-down-row">
+  <td>Required Equipment Down Payment</td>
+  <td class="num" id="quote-required-down">$0.00</td>
+</tr>
+
+<tr id="quote-amount-due-today-row">
+  <td>Total Amount Due Today</td>
+  <td class="num" id="quote-amount-due-today">$0.00</td>
+</tr>
+
      <tr id="quote-financed-row">
   <td>Amount Financed</td>
   <td class="num" id="quote-financed">$0.00</td>
@@ -621,7 +652,10 @@ td{
 
     <div class="dealer-field">
       <label for="payment-amount">Amount Received</label>
-      <input id="payment-amount" type="number" min="0" step="0.01" placeholder="0.00">
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span aria-hidden="true" style="font-weight:700;">$</span>
+        <input id="payment-amount" type="number" min="0" step="0.01" placeholder="0.00" style="flex:1;min-width:0;">
+      </div>
     </div>
 
     <div class="dealer-field">
@@ -714,11 +748,16 @@ td{
 const CONFIGURATOR_API =
   "https://westendpower-configurator-api.westendpower-nm.workers.dev";
 
+const quoteBrandId =
+  String(quoteData.document?.brandId || 'BRAND')
+    .trim()
+    .toUpperCase();
+
 const dealerSessionToken =
   String(
     quoteData.dealerSessionToken ||
     sessionStorage.getItem(
-      "hondaDealerSessionToken"
+      `${quoteBrandId.toLowerCase()}DealerSessionToken`
     ) ||
     ""
   ).trim();
@@ -748,7 +787,7 @@ const savedDocument =
 
 const dealerQuoteMode =
   savedDocument.dealerMode === true &&
-  sessionStorage.getItem('dealerMode') === '1';
+  !!dealerSessionToken;
 
 document.body.classList.toggle(
   'quote-dealer',
@@ -877,6 +916,11 @@ const paymentDiscount =
     line.paymentDiscount
   );
 
+const directLineDiscount =
+  money(
+    line.lineDiscount
+  );
+
 const factoryRebate =
   money(
     line.factoryRebate
@@ -895,6 +939,7 @@ const bidFleetDiscount =
 const totalDiscount =
   money(line.totalDiscount) ||
   (
+    directLineDiscount +
     paymentDiscount +
     factoryRebate +
     manualCustomerDiscount +
@@ -953,6 +998,10 @@ ${money(line.totalDiscount) > 0 ? `
 
       money(line.paymentDiscount) > 0
         ? `Payment savings ${fmtMoney(line.paymentDiscount)}`
+        : '',
+
+      money(line.lineDiscount) > 0
+        ? `Line discount ${fmtMoney(line.lineDiscount)}`
         : '',
 
       money(line.manualCustomerDiscount) > 0
@@ -1423,8 +1472,9 @@ try{
 
 const documentState = {
   quoteNumber:
+    clean(savedDocument.quoteNumber) ||
     clean(storedDocument.quoteNumber) ||
-    documentNumber('HONDA'),
+    documentNumber(quoteBrandId),
 
   quoteDate:
     clean(storedDocument.quoteDate) ||
@@ -1447,6 +1497,47 @@ const documentState = {
       : []
 };
 
+function savedPaymentMethodKey(method){
+  const normalized = clean(method).toLowerCase();
+  const keys = {
+    cash: 'cash',
+    check: 'check',
+    'bank check': 'bank-check',
+    'cash / bank check': 'bank-check',
+    'personal / business check': 'check',
+    'credit / debit card': 'credit-card',
+    'credit card': 'credit-card',
+    'debit card': 'debit-card',
+    financing: 'finance',
+    'payment link': 'payment-link',
+    other: 'other'
+  };
+
+  return keys[normalized] || 'other';
+}
+
+const savedSaleMethod = clean(
+  savedSale.paymentType ||
+  savedSale.paymentMethod ||
+  savedSale.method
+);
+
+if(savedSaleMethod && documentState.payments.length){
+  const savedAmount = money(savedSale.amountReceived);
+  const savedReference = clean(savedSale.reference);
+  const legacyPayment = documentState.payments.find(payment =>
+    String(payment?.id || '').startsWith('legacy-') &&
+    money(payment?.amount) === savedAmount &&
+    clean(payment?.reference) === savedReference &&
+    (!clean(payment?.method) || clean(payment?.method).toLowerCase() === 'other')
+  );
+
+  if(legacyPayment){
+    legacyPayment.method = savedSaleMethod;
+    legacyPayment.methodKey = savedPaymentMethodKey(savedSaleMethod);
+  }
+}
+
 if(
   !documentState.payments.length &&
   money(savedSale.amountReceived) > 0
@@ -1457,8 +1548,8 @@ if(
       clean(savedSale.paymentDate) ||
       new Date().toISOString().slice(0,10),
     amount: money(savedSale.amountReceived),
-    method: clean(savedSale.paymentType) || 'Other',
-    methodKey: 'other',
+    method: savedSaleMethod || 'Other',
+    methodKey: savedPaymentMethodKey(savedSaleMethod),
     cardType: '',
     reference: clean(savedSale.reference),
     receivedBy: clean(savedCustomer.salesperson),
@@ -1477,15 +1568,10 @@ saveDocumentState();
 
 async function syncDealerQuoteState(){
 
-  if(!dealerQuoteMode){
-    return false;
-  }
-
-  if(!dealerSessionToken){
-    alert(
-      "The sales order was created locally, but it was not saved to the dashboard.\n\n" +
-      "Return to the configurator, unlock Dealer Mode again, and reopen this quote."
-    );
+  if(
+    !dealerQuoteMode ||
+    !dealerSessionToken
+  ){
     return false;
   }
 
@@ -1498,6 +1584,61 @@ async function syncDealerQuoteState(){
       amountReceived,
       0
     );
+
+  const remainingPlanForSave =
+    documentState.remainingPaymentPlan || {
+      cash: money(savedPayment.cash),
+      credit: money(savedPayment.credit),
+      finance: money(savedPayment.financed)
+    };
+
+  const actualByClassForSave =
+    documentState.actualPaymentsByClass || {
+      cash: 0,
+      credit: 0,
+      finance: 0
+    };
+
+  const paymentPlanForSave = {
+    cash:
+      money(remainingPlanForSave.cash) +
+      money(actualByClassForSave.cash),
+    credit:
+      money(remainingPlanForSave.credit) +
+      money(actualByClassForSave.credit),
+    finance:
+      money(remainingPlanForSave.finance) +
+      money(actualByClassForSave.finance)
+  };
+
+  const paymentAllocationGap =
+    Math.max(
+      currentOrderTotal() -
+      (
+        money(paymentPlanForSave.cash) +
+        money(paymentPlanForSave.credit) +
+        money(paymentPlanForSave.finance)
+      ),
+      0
+    );
+
+  if(
+    money(savedPayment.financed) > 0 ||
+    clean(savedPayment.program)
+  ){
+    paymentPlanForSave.finance +=
+      paymentAllocationGap;
+  }else if(money(paymentPlanForSave.cash) > 0){
+    paymentPlanForSave.cash +=
+      paymentAllocationGap;
+  }else{
+    paymentPlanForSave.credit +=
+      paymentAllocationGap;
+  }
+
+  const remainingAmountDueTodayForSave =
+    money(remainingPlanForSave.cash) +
+    money(remainingPlanForSave.credit);
 
   const status =
     !documentState.orderNumber
@@ -1536,7 +1677,8 @@ async function syncDealerQuoteState(){
           },
 
           body:JSON.stringify({
-            brandId: "HONDA",
+            brandId:
+              quoteBrandId,
 
             quoteNumber:
               documentState.quoteNumber,
@@ -1573,8 +1715,18 @@ async function syncDealerQuoteState(){
               ),
 
             payment:
-              clean(
-                savedPayment.program
+              clean(savedPayment.program) ||
+              (
+                money(savedPayment.credit) > 0 &&
+                money(savedPayment.cash) <= 0
+                  ? "Credit Card"
+                  : money(savedPayment.cash) > 0 &&
+                    money(savedPayment.credit) <= 0
+                    ? "Cash / Bank Check"
+                    : money(savedPayment.cash) > 0 &&
+                      money(savedPayment.credit) > 0
+                      ? "Mixed Cash / Credit"
+                      : ""
               ),
 
             selectedTool:
@@ -1606,6 +1758,14 @@ async function syncDealerQuoteState(){
               documentState.payments,
 
             payload:{
+              plannedPaymentMethod:
+                money(savedPayment.credit) > 0 &&
+                money(savedPayment.cash) <= 0
+                  ? "credit"
+                  : money(savedPayment.financed) > 0
+                    ? "finance"
+                    : "cash",
+
               items:
                 visibleLines.map(line => ({
                   qty:
@@ -1624,7 +1784,22 @@ async function syncDealerQuoteState(){
                 })),
 
               notes:
-                clean(savedCustomer.notes)
+                clean(savedCustomer.notes),
+
+              payment:{
+                ...savedPayment,
+                cash:
+                  paymentPlanForSave.cash,
+                credit:
+                  paymentPlanForSave.credit,
+                financed:
+                  paymentPlanForSave.finance,
+                amountDueToday:
+                  remainingAmountDueTodayForSave
+              },
+
+              totals:
+                savedTotals
             }
           }),
 
@@ -1660,6 +1835,48 @@ async function syncDealerQuoteState(){
 
     return false;
   }
+}
+
+async function manuallySyncDashboard(){
+  if(!dealerQuoteMode) return;
+
+  const button =
+    document.getElementById(
+      'quote-sync-dashboard'
+    );
+  const message =
+    document.getElementById(
+      'quote-sync-dashboard-message'
+    );
+
+  button.disabled = true;
+  button.textContent = 'Updating Dashboard...';
+  message.textContent = '';
+
+  const enteredOrderNumber = clean(
+    document.getElementById(
+      'quote-order-number-control'
+    )?.value
+  );
+
+  if(enteredOrderNumber){
+    documentState.orderNumber =
+      enteredOrderNumber;
+    saveDocumentState();
+    renderDocumentState();
+  }
+
+  const updated =
+    await syncDealerQuoteState();
+
+  button.disabled = false;
+  button.textContent = 'Update Dashboard';
+  message.textContent = updated
+    ? 'Dashboard updated successfully.'
+    : 'Dashboard update failed. See the error message above.';
+  message.style.color = updated
+    ? '#17652d'
+    : '#b00020';
 }
 
 const quoteDate =
@@ -1701,6 +1918,36 @@ const selectedCredit =
 
 const selectedFinanced =
   money(savedPayment.financed);
+
+const requiredDown =
+  money(savedPayment.requiredDown);
+
+const amountDueToday =
+  money(savedPayment.amountDueToday);
+
+document.getElementById(
+  'quote-required-down'
+).textContent =
+  fmtMoney(requiredDown);
+
+document.getElementById(
+  'quote-required-down-row'
+).style.display =
+  requiredDown > 0
+    ? ''
+    : 'none';
+
+document.getElementById(
+  'quote-amount-due-today'
+).textContent =
+  fmtMoney(amountDueToday);
+
+document.getElementById(
+  'quote-amount-due-today-row'
+).style.display =
+  amountDueToday > 0
+    ? ''
+    : 'none';
 
 document.getElementById(
   'quote-cash-row'
@@ -1776,7 +2023,10 @@ document.getElementById(
 
 document.getElementById(
   'quote-total-payback-row'
-).style.display = 'none';
+).style.display =
+  totalPayback > 0
+    ? ''
+    : 'none';
 
 document.getElementById(
   'quote-program'
@@ -1886,14 +2136,15 @@ function recalculatePaymentMethodAdjustment(){
     finance: 0
   };
 
-  const adjustmentSegments = [];
-
   activePayments().forEach(payment => {
     const actualClass =
       paymentClass(payment.methodKey);
 
-    actualByClass[actualClass] +=
+    const paymentAmount =
       money(payment.amount);
+
+    actualByClass[actualClass] +=
+      paymentAmount;
 
     const consumeOrder = [
       actualClass,
@@ -1905,7 +2156,7 @@ function recalculatePaymentMethodAdjustment(){
         array.indexOf(value) === index
     );
 
-    let amountLeft = money(payment.amount);
+    let amountLeft = paymentAmount;
 
     consumeOrder.forEach(plannedClass => {
       if(amountLeft <= 0) return;
@@ -1917,133 +2168,31 @@ function recalculatePaymentMethodAdjustment(){
         );
 
       const applied =
-        Math.min(amountLeft, available);
-
-      if(applied <= 0) return;
-
-      const rateDifference =
-        Math.max(
-          paymentDiscountRate(plannedClass) -
-          paymentDiscountRate(actualClass),
-          0
+        Math.min(
+          amountLeft,
+          available
         );
-
-      if(rateDifference > 0){
-        adjustmentSegments.push({
-          amount: applied,
-          rateDifference
-        });
-      }
 
       remainingPlan[plannedClass] -= applied;
       amountLeft -= applied;
     });
   });
 
-  let adjustmentBeforeTax = 0;
-
   visibleLines.forEach(line => {
-    const originalPaymentDiscount =
+    line.revisedPaymentDiscount =
       money(line.originalPaymentDiscount);
 
-    if(originalPaymentDiscount <= 0){
-      line.revisedPaymentDiscount = 0;
-      line.paymentMethodAdjustment = 0;
-      return;
-    }
-
-    const lineShare =
-      documentState.baseTotal > 0
-        ? money(line.originalFinalLineTotal) /
-          documentState.baseTotal
-        : 0;
-
-    const rawReduction =
-      adjustmentSegments.reduce(
-        (total,segment) =>
-          total +
-          segment.amount *
-          lineShare *
-          segment.rateDifference /
-          100,
-        0
-      );
-
-    let revisedPaymentDiscount =
-      originalPaymentDiscount;
-
-    if(rawReduction > 0.0001){
-      const remainingSavings =
-        Math.max(
-          originalPaymentDiscount - rawReduction,
-          0
-        );
-
-      revisedPaymentDiscount =
-        remainingSavings >= 10
-          ? Math.floor(
-              (remainingSavings + 0.000001) / 10
-            ) * 10
-          : 0;
-    }
-
-    revisedPaymentDiscount =
-      Math.min(
-        revisedPaymentDiscount,
-        originalPaymentDiscount
-      );
-
-    line.revisedPaymentDiscount =
-      revisedPaymentDiscount;
-
-    line.paymentMethodAdjustment =
-      Math.max(
-        originalPaymentDiscount -
-        revisedPaymentDiscount,
-        0
-      );
-
-    adjustmentBeforeTax +=
-      line.paymentMethodAdjustment;
+    line.paymentMethodAdjustment = 0;
   });
 
-  const preTaxTotal =
-    Math.max(
-      documentState.baseTotal -
-      money(savedTotals.salesTax),
-      0
-    );
-
-  const taxRate =
-    savedTotals.taxExempt
-      ? 0
-      : money(savedDocument.taxRate) > 0
-        ? money(savedDocument.taxRate)
-        : preTaxTotal > 0
-          ? money(savedTotals.salesTax) / preTaxTotal
-          : 0;
-
-  const roundedBeforeTax =
-    Math.round(adjustmentBeforeTax * 100) / 100;
-
-  const totalAdjustment =
-    Math.round(
-      roundedBeforeTax *
-      (1 + taxRate) *
-      100
-    ) / 100;
-
-  documentState.paymentAdjustmentBeforeTax =
-    roundedBeforeTax;
-
-  documentState.paymentTaxAdjustment =
-    Math.round(
-      (totalAdjustment - roundedBeforeTax) *
-      100
-    ) / 100;
-
-  documentState.priceAdjustment =
-    totalAdjustment;
+  /*
+    A recorded payment never changes the agreed
+    sales-order price. Card and financing fees are
+    dealer expenses shown only in dealer reporting.
+  */
+  documentState.paymentAdjustmentBeforeTax = 0;
+  documentState.paymentTaxAdjustment = 0;
+  documentState.priceAdjustment = 0;
 
   documentState.remainingPaymentPlan =
     remainingPlan;
@@ -2089,6 +2238,11 @@ function renderAdjustedLines(){
       revisedPaymentDiscount > 0
         ? 'Payment savings ' +
           fmtMoney(revisedPaymentDiscount)
+        : '',
+
+      money(line.lineDiscount) > 0
+        ? 'Line discount ' +
+          fmtMoney(line.lineDiscount)
         : '',
 
       money(line.manualCustomerDiscount) > 0
@@ -2278,6 +2432,35 @@ function renderPaymentHistory(){
 }
 
 function renderDealerCosts(){
+  const savedDealerFinancials =
+    savedDocument.dealerFinancials &&
+    typeof savedDocument.dealerFinancials === 'object'
+      ? savedDocument.dealerFinancials
+      : null;
+
+  if(savedDealerFinancials){
+    const d = savedDealerFinancials;
+
+    document.getElementById('dealer-cost-summary').innerHTML = `
+      <div class="cost-summary-row"><span>Dealer Cost</span><strong>${fmtMoney(d.dealerCost)}</strong></div>
+      <div class="cost-summary-row"><span>Advertising Fee</span><strong>${fmtMoney(d.advertisingFee)}</strong></div>
+      <div class="cost-summary-row"><span>Internal Freight Cost</span><strong>${fmtMoney(d.internalFreightCost)}</strong></div>
+      <div class="cost-summary-row"><span>True Dealer Cost</span><strong>${fmtMoney(d.trueDealerCost)}</strong></div>
+      ${money(d.manufacturerCostDiscount) > 0 ? `<div class="cost-summary-row"><span>Manufacturer Cost Discount</span><strong>-${fmtMoney(d.manufacturerCostDiscount)}</strong></div>` : ''}
+      ${money(d.customerRebate) > 0 ? `<div class="cost-summary-row"><span>Customer Rebate</span><strong>${fmtMoney(d.customerRebate)}</strong></div>` : ''}
+      ${money(d.dealerReimbursement) > 0 ? `<div class="cost-summary-row"><span>Less: Dealer Reimbursement</span><strong>-${fmtMoney(d.dealerReimbursement)}</strong></div>` : ''}
+      <div class="cost-summary-row"><span>Net Dealer Cost</span><strong>${fmtMoney(d.netDealerCost)}</strong></div>
+      <div class="cost-summary-row"><span>Gross Profit</span><strong>${fmtMoney(d.grossProfit)}</strong></div>
+      <div class="cost-summary-row"><span>Gross Margin</span><strong>${escapeHtml(d.grossMargin || '0.0%')}</strong></div>
+      <div class="cost-summary-row"><span>Credit/Debit Processing Fees</span><strong>-${fmtMoney(d.creditCardFee)}</strong></div>
+      <div class="cost-summary-row"><span>Financing Program Fees</span><strong>-${fmtMoney(d.financingFee)}</strong></div>
+      <div class="cost-summary-row total"><span>Estimated Net Profit</span><strong>${fmtMoney(d.netProfit)}</strong></div>
+      <div class="cost-summary-row"><span>Net Margin</span><strong>${escapeHtml(d.netMargin || '0.0%')}</strong></div>
+      <div class="cost-summary-row"><span>Minimum Profit Amount</span><strong>${escapeHtml(d.minimumProfit || 'Not Set')}</strong></div>
+    `;
+    return;
+  }
+
   const itemCost = visibleLines.reduce((total,line) => {
     const qty = Number(line.qty) || 1;
     const item = line.item || {};
@@ -2315,6 +2498,16 @@ function renderDealerCosts(){
     money(savedDocument.financeDealerFeePercent) /
     100;
 
+  const manufacturerCostDiscount = Math.min(
+    Math.max(money(savedDocument.manufacturerCostDiscount), 0),
+    itemCost
+  );
+
+  const adjustedItemCost = Math.max(
+    itemCost - manufacturerCostDiscount,
+    0
+  );
+
   const sellingBeforeTax =
     Math.max(
       currentOrderTotal() -
@@ -2326,7 +2519,7 @@ function renderDealerCosts(){
     );
 
   const grossProfit =
-    sellingBeforeTax - itemCost;
+    sellingBeforeTax - adjustedItemCost;
 
   const netProfit =
     grossProfit - cardFee - financeFee;
@@ -2335,6 +2528,8 @@ function renderDealerCosts(){
     'dealer-cost-summary'
   ).innerHTML = `
     <div class="cost-summary-row"><span>Recorded Dealer Cost</span><strong>${fmtMoney(itemCost)}</strong></div>
+    ${manufacturerCostDiscount > 0 ? `<div class="cost-summary-row"><span>Manufacturer Cost Discount</span><strong>-${fmtMoney(manufacturerCostDiscount)}</strong></div>` : ''}
+    <div class="cost-summary-row"><span>Adjusted Dealer Cost</span><strong>${fmtMoney(adjustedItemCost)}</strong></div>
     <div class="cost-summary-row"><span>Credit/Debit Processing Fees</span><strong>-${fmtMoney(cardFee)}</strong></div>
     <div class="cost-summary-row"><span>Financing Program Fees</span><strong>-${fmtMoney(financeFee)}</strong></div>
     <div class="cost-summary-row"><span>Gross Profit Before Payment Fees</span><strong>${fmtMoney(grossProfit)}</strong></div>
@@ -2382,6 +2577,22 @@ function renderDocumentState(){
       finance: 0
     };
 
+  const remainingAmountDueToday =
+    money(remainingPlan.cash) +
+    money(remainingPlan.credit);
+
+  document.getElementById(
+    'quote-amount-due-today'
+  ).textContent =
+    fmtMoney(remainingAmountDueToday);
+
+  document.getElementById(
+    'quote-amount-due-today-row'
+  ).style.display =
+    remainingAmountDueToday > 0
+      ? ''
+      : 'none';
+
   const displayedPlan = {
     cash:
       money(remainingPlan.cash) +
@@ -2408,7 +2619,18 @@ function renderDocumentState(){
       0
     );
 
-  if(money(remainingPlan.cash) > 0){
+  /*
+    Older saved sales orders subtracted recorded deposits from the
+    planned financed amount. Restore any allocation gap to financing
+    when the customer selected a financing program; do not inflate the
+    selected cash/down-payment amount.
+  */
+  if(
+    money(savedPayment.financed) > 0 ||
+    clean(savedPayment.program)
+  ){
+    displayedPlan.finance += addedBalance;
+  }else if(money(remainingPlan.cash) > 0){
     displayedPlan.cash += addedBalance;
   }else if(money(remainingPlan.credit) > 0){
     displayedPlan.credit += addedBalance;
@@ -2498,6 +2720,19 @@ function renderDocumentState(){
         : 'Convert to Sales Order';
   }
 
+  const orderNumberControl =
+    document.getElementById(
+      'quote-order-number-control'
+    );
+
+  if(
+    orderNumberControl &&
+    document.activeElement !== orderNumberControl
+  ){
+    orderNumberControl.value =
+      documentState.orderNumber || '';
+  }
+
   const paidInFull =
     !!documentState.orderNumber &&
     balance <= 0.009;
@@ -2571,7 +2806,7 @@ async function convertToSalesOrder(){
 
   if(!documentState.orderNumber){
     documentState.orderNumber =
-      documentNumber('SO-HONDA');
+      documentNumber(`SO-${quoteBrandId}`);
   }
 
   renderDocumentState();
@@ -2638,7 +2873,7 @@ if(!receivedBy){
       new Date().toISOString().slice(0,10),
     amount,
     methodKey,
-    method: '',
+    method: paymentMethodLabel({methodKey}),
     cardType,
     reference: clean(
       document.getElementById('payment-reference').value
@@ -2750,6 +2985,13 @@ if(dealerQuoteMode){
   ).addEventListener('click', toggleDealerCosts);
 
   document.getElementById(
+    'quote-sync-dashboard'
+  ).addEventListener(
+    'click',
+    manuallySyncDashboard
+  );
+
+  document.getElementById(
     'payment-record-button'
   ).addEventListener('click', recordPayment);
 
@@ -2786,12 +3028,7 @@ if(dealerQuoteMode){
 
 renderDocumentState();
 
-if(dealerQuoteMode){
-  syncDealerQuoteState();
-}
-
   </script>
 
-<script src="https://westendpower-configurator-api.westendpower-nm.workers.dev/shared-quote-document.js?v=20260826-1"></script>
 </body>
 </html>

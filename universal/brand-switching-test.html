@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en" data-configurator-brand="YANMAR">
+<head>
+  <meta charset="UTF-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  >
+  <title>Universal Brand Switching Test</title>
+
+  <style>
+    :root {
+      --config-accent: #cc0000;
+      --config-dark: #111111;
+      --config-surface: #f5f5f5;
+      --config-border: #dddddd;
+      --config-max-width: 900px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      color: var(--config-dark);
+      background: var(--config-surface);
+    }
+
+    main {
+      width: min(
+        calc(100% - 32px),
+        var(--config-max-width)
+      );
+      margin: 32px auto;
+      background: white;
+      border: 1px solid var(--config-border);
+      border-top: 8px solid var(--config-accent);
+      border-radius: 8px;
+      padding: 24px;
+    }
+
+    h1 {
+      margin-top: 0;
+      color: var(--config-accent);
+    }
+
+    button {
+      border: 0;
+      border-radius: 5px;
+      padding: 11px 16px;
+      margin: 0 8px 12px 0;
+      color: white;
+      background: var(--config-accent);
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .result {
+      margin-top: 18px;
+      padding: 16px;
+      border: 1px solid var(--config-border);
+      border-radius: 6px;
+      background: var(--config-surface);
+    }
+
+    .pass {
+      color: #1f7a3a;
+      font-weight: 700;
+    }
+
+    pre {
+      overflow: auto;
+      white-space: pre-wrap;
+    }
+  </style>
+
+  <script src="./brand-profile.js"></script>
+  <script src="./brand-profile-template.js"></script>
+</head>
+
+<body>
+  <main>
+    <h1 id="brand-name">
+      Universal Brand Switching Test
+    </h1>
+
+    <p>
+      This page tests brand identity, appearance,
+      data paths, capabilities, validation, and
+      runtime switching without loading the
+      production configurator.
+    </p>
+
+    <button type="button" data-brand="YANMAR">
+      Show Yanmar
+    </button>
+
+    <button type="button" data-brand="TESTBRAND">
+      Show Test Brand
+    </button>
+
+    <div class="result">
+      <div id="status"></div>
+      <pre id="details"></pre>
+    </div>
+  </main>
+
+  <script>
+    (function runBrandSwitchingTest() {
+      'use strict';
+
+      const api =
+        window.WestEndConfiguratorBrand;
+
+      const templateApi =
+        window.WestEndConfiguratorBrandTemplate;
+
+      const testProfile =
+        templateApi.createBrandProfileTemplate({
+          id: 'testbrand',
+          name: 'Universal Test Brand',
+          dataRoot: 'brands/testbrand/data',
+          colors: {
+            accent: '#0067b1',
+            dark: '#10253f',
+            surface: '#eef6fb',
+            border: '#b7d5e8'
+          },
+          capabilities: {
+            onlineOrders: false,
+            financing: false
+          }
+        });
+
+      api.registerBrandProfile(testProfile);
+
+      function showBrand(brandId) {
+        document.documentElement
+          .dataset
+          .configuratorBrand = brandId;
+
+        const profile =
+          api.getActiveBrandProfile(document);
+
+        const validation =
+          api.validateBrandProfile(profile);
+
+        if(!validation.valid){
+          throw new Error(
+            validation.errors.join(' ')
+          );
+        }
+
+        api.applyAppearance(
+          profile.id,
+          document
+        );
+
+        document.getElementById(
+          'brand-name'
+        ).textContent =
+          profile.name;
+
+        document.getElementById(
+          'status'
+        ).innerHTML =
+          '<span class="pass">PASS</span> — ' +
+          profile.id +
+          ' selected and validated.';
+
+        document.getElementById(
+          'details'
+        ).textContent =
+          JSON.stringify({
+            id: profile.id,
+            name: profile.name,
+            products:
+              profile.data.files.products,
+            accent:
+              profile.appearance.colors.accent,
+            dealerMode:
+              profile.capabilities.dealerMode,
+            onlineOrders:
+              profile.capabilities.onlineOrders,
+            financing:
+              profile.capabilities.financing
+          }, null, 2);
+      }
+
+      document
+        .querySelectorAll('[data-brand]')
+        .forEach((button) => {
+          button.addEventListener(
+            'click',
+            () => showBrand(
+              button.dataset.brand
+            )
+          );
+        });
+
+      showBrand(
+        api.getActiveBrandId(document)
+      );
+    })();
+  </script>
+</body>
+</html>
