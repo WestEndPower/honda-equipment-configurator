@@ -1,0 +1,10 @@
+﻿SKU,Description,Active,AssemblyAmount,AssemblyOption,AssemblyTime,BrandID,Category,DeliveryGroup,DiscountEligible,DisplayAvailability,FinancingEligible,FreightGroup,LocalDelivery,Model,MSRP,PowerType,ProductType,PromoName,QtyDanbury,QtyNewMilford,RebateEligible,RebateEndDate,RebateStartDate,RebateToCustomer,SaleEndDate,SalePrice,SaleStartDate,Series,SortOrder,SpecialFinancingEligible,SubCategory,System,Taxable,AllowBackorder,BuyOnlineEligible,MaximumOnLineQty,AvailabilityRequestEligible,ShippingEligible,ShippingRateType,ShipWeight,ShipLength,ShipWidth,ShipHeight,ShippingCarrierRule,ShippingRestriction,ShipsSeparately,RequiredModel1,RequiredSKU1,RequiredQty1,RequiredDescription1,RequiredModel2,RequiredSKU2,RequiredQty2,RequiredDescription2
+661880,"SSESS Extension - 19.6""",F,0,T,0,HONDA,Attachments,,T,T,T,HONDA_SPECIAL_40,,SSESS,79,,,,0,0,,,,,,,,,111,,,,,,,,,,,,,,,,,,,,,,,,,
+661870,"SSESL Extension - 39.3""",T,0,T,0,HONDA,Attachments,,T,T,T,HONDA_SPECIAL_40,,SSESL,99,,,,0,0,,,,,,,,,112,,,,,,,,,,,,,,,,,,,,,,,,,
+661060,SSST Trimmer Attachment,T,0,T,0,HONDA,Attachments,,T,T,T,HONDA_SPECIAL_40,,SSST,119,,,,0,0,,,,,,,,,113,,,,,,,,,,,,,,,,,,,,,,,,,
+661000,SSBL Blower Attachment,T,0,T,0,HONDA,Attachments,,T,T,T,HONDA_SPECIAL_40,,SSBL,139,,,,0,0,,,,,,,,,114,,,,,,,,,,,,,,,,,,,,,,,,,
+661020,SSET Edger Attachment,T,0,T,0,HONDA,Attachments,,T,T,T,HONDA_SPECIAL_40,,SSET,189,,,,0,0,,,,,,,,,115,,,,,,,,,,,,,,,,,,,,,,,,,
+661050,SSPP Pole Pruner Attachment,T,0,T,0,HONDA,Attachments,,T,T,T,HONDA_SPECIAL_40,,SSPP,219,,,,0,0,,,,,,,,,116,,,,,,,,,,,,,,,,,,,,,,,,,
+661040,SSHHS Hedge Trimmer Attachment,F,0,T,0,HONDA,Attachments,,T,T,T,HONDA_SPECIAL_40,,SSHHS,219,,,,0,0,,,,,,,,,117,,,,,,,,,,,,,,,,,,,,,,,,,
+661010,SSCL Cultivator Attachment,T,0,T,0,HONDA,Attachments,,T,T,T,HONDA_SPECIAL_40,,SSCL,239,,,,0,0,,,,,,,,,118,,,,,,,,,,,,,,,,,,,,,,,,,
+661030,SSHHL Hedge Trimmer Attachment,T,0,T,0,HONDA,Attachments,,T,T,T,HONDA_SPECIAL_40,,SSHHL,189,,,,0,0,,,,,,,,,119,,,,,,,,,,,,,,,,,,,,,,,,,

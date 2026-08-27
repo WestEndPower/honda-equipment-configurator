@@ -1,0 +1,3 @@
+﻿SKU,Description,Active,Amount,BidEligible,BidCustomerDiscount,BrandID,ChargerID,ChargerName,DeliveryGroup,FinancingEligible,FinancingGroup,FleetEligible,FleetGroup,FleetPoints,FleetRebateProgram,FleetTier1Discount,FleetTier2Discount,FreightGroup,MSRP,OutputAmps,PromoName,PromotionType,RebateEligible,RebateStartDate,RebateEndDate,SalePrice,RebateToCustomer,SaleStartDate,SaleEndDate,SortOrder,System,Taxable,Voltage,ImageURL,Notes
+669101,CV5020N1A Standard Charger,T,,,,HONDA,,,HANDHELD,T,,,,0,,,,HONDA_SPECIAL_40,99,,0,,,,,,,,,107,HONDA_BATTERY,T,,,
+669111,CV5080N1A Quick Charger,T,,,,HONDA,,,HANDHELD,T,,,,0,,,,HONDA_SPECIAL_40,179,,0,,,,,,,,,108,HONDA_BATTERY,T,,,
