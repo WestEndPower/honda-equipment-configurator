@@ -11946,23 +11946,61 @@ const warrantyHtml =
         }
 
         .tag-header{
-  display:grid;
-  grid-template-columns:1fr;
+          display:grid;
+          grid-template-columns:minmax(190px,0.8fr) minmax(0,1.7fr);
           align-items:center;
-          gap:18px;
-          padding:18px 22px;
+          gap:22px;
+          padding:16px 22px;
           background:#cc0000;
           color:#111;
+        }
+
+        .tag-brand-logo{
+          justify-self:start;
+          display:inline-block;
+          background:#fff;
+          border:3px solid #111;
+          outline:2px solid #d71920;
+          outline-offset:-6px;
+          padding:7px 14px 8px;
+          transform:skew(-2deg);
+        }
+
+        .tag-brand-logo-main{
+          font-size:30px;
+          line-height:.95;
+          font-weight:900;
+          letter-spacing:1px;
+          color:#d71920;
+          text-shadow:1px 1px 0 #111,-1px -1px 0 #111;
+          white-space:nowrap;
+        }
+
+        .tag-brand-logo-sub{
+          margin-top:5px;
+          font-family:Georgia,serif;
+          font-size:14px;
+          line-height:1;
+          font-weight:700;
+          font-style:italic;
+          text-align:center;
+          white-space:nowrap;
+        }
+
+        .tag-model-block{
+          min-width:0;
+          text-align:center;
         }
 
         .tag-description{
           text-align:center;
           font-size:30px;
+          line-height:1.08;
           font-weight:900;
         }
 
         .tag-sku{
-          grid-column:1 / -1;
+          margin-top:12px;
           text-align:center;
           font-size:15px;
           font-weight:800;
@@ -12350,13 +12388,19 @@ const warrantyHtml =
       <main class="tag-sheet">
 
         <header class="tag-header">
-
-          <div class="tag-description">
-            ${escapeHtml(data.description)}
+          <div class="tag-brand-logo" aria-label="West End Power Equipment Company">
+            <div class="tag-brand-logo-main">WEST END</div>
+            <div class="tag-brand-logo-sub">Power Equipment Company</div>
           </div>
 
-          <div class="tag-sku">
-            SKU #: ${escapeHtml(data.sku)}
+          <div class="tag-model-block">
+            <div class="tag-description">
+              ${escapeHtml(data.description)}
+            </div>
+
+            <div class="tag-sku">
+              SKU #: ${escapeHtml(data.sku)}
+            </div>
           </div>
         </header>
 
