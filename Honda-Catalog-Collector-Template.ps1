@@ -169,7 +169,7 @@ async function load(cdp, url) {
   for (const sku of skus) output[sku] = found.has(sku) ? Array.from(found.get(sku)).sort() : [];
   fs.writeFileSync(outputPath, JSON.stringify({collectedAt:new Date().toISOString(), pagesScanned:visited.size, products:output}, null, 2));
   process.stdout.write(`\nCollected ${found.size} Honda model links from ${visited.size} catalog pages.\n`);
-  process.exit(0);
+  try { await cdp.send('Browser.close'); } catch {} process.exit(0);
 })().catch(e => { process.stderr.write('\n' + e.stack + '\n'); process.exit(1); });
 '@
 
@@ -315,5 +315,9 @@ Proposed changes: $changes
     }
 }
 finally {
+    if ($edgeProcess -and -not $edgeProcess.HasExited) {
+        & taskkill.exe /PID $edgeProcess.Id /T /F 2>$null | Out-Null
+    }
+
     Remove-Item -LiteralPath $tempRoot -Recurse -Force -ErrorAction SilentlyContinue
 }
