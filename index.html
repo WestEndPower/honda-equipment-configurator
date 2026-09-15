@@ -1330,7 +1330,8 @@ body.dealer-mode .dealer-only{
     Manufacturer<br>Resources
   </a>
 
-  <a href="https://westendpower-configurator-api.westendpower-nm.workers.dev/dashboard"
+  <a id="stihl-quote-dashboard"
+     href="https://westendpower-configurator-api.westendpower-nm.workers.dev/dashboard"
      target="_blank"
      rel="noopener"
      class="stihl-btn light"
@@ -1694,6 +1695,7 @@ const batteryCodes = [];
 
 const state = {
   tools: [],
+  inventory: [],
   inventoryAvailability: new Map(),
   inventoryAvailabilityLoaded: false,
   packages: [],
@@ -1774,15 +1776,25 @@ function createQuoteNumber(brand){
 }
 
 function currentQuoteNumber(){
+  const quoteBrand =
+    clean(ACTIVE_BRAND_ID).toUpperCase() ||
+    configuratorBrandId();
   const key =
-    `${configuratorBrandId().toLowerCase()}CurrentQuoteNumber`;
+    `${quoteBrand.toLowerCase()}CurrentQuoteNumber`;
+  const expectedPrefix =
+    `${quoteBrand}-`;
 
   let quoteNumber =
     clean(sessionStorage.getItem(key));
 
-  if(!quoteNumber){
+  if(
+    !quoteNumber ||
+    !quoteNumber.toUpperCase().startsWith(
+      expectedPrefix
+    )
+  ){
     quoteNumber =
-      createQuoteNumber(configuratorBrandId());
+      createQuoteNumber(quoteBrand);
 
     sessionStorage.setItem(
       key,
@@ -1794,8 +1806,11 @@ function currentQuoteNumber(){
 }
 
 function clearCurrentQuoteNumber(){
+  const quoteBrand =
+    clean(ACTIVE_BRAND_ID).toUpperCase() ||
+    configuratorBrandId();
   sessionStorage.removeItem(
-    `${configuratorBrandId().toLowerCase()}CurrentQuoteNumber`
+    `${quoteBrand.toLowerCase()}CurrentQuoteNumber`
   );
 }
     function isTrue(v){
@@ -2173,6 +2188,16 @@ function lineDealerCost(line){
 
   if(line.included){
     return money(line.replacementDealerCostAdjustment);
+  }
+
+  const inventoryActualCost =
+    clean(line.inventoryRecord?.ActualCost);
+
+  if(clean(line.inventoryId) && inventoryActualCost !== ''){
+    return (
+      money(inventoryActualCost) *
+      (Number(line.qty) || 1)
+    );
   }
 
   const qty =
@@ -3739,6 +3764,9 @@ function publicPricingCartContext(){
               line.item.SKU
             ),
 
+          inventoryId:
+            clean(line.inventoryId),
+
           quantity:
             Number(line.qty) || 1
         }))
@@ -3783,6 +3811,7 @@ function publicPricingKey(
   return JSON.stringify([
     sku,
     quantity,
+    clean(line?.inventoryId),
     selection?.paymentMethod || "",
     selection?.financeProgramId || "",
     selection?.cashAmount || 0,
@@ -3874,6 +3903,8 @@ if(!CONFIGURATOR_API){
     const requestBody = {
     brandId:configuratorBrandId(),
       sku,
+      inventoryId:
+        clean(line?.inventoryId),
       quantity:
         Number(line?.qty) || 1,
             taxExempt:
@@ -7298,6 +7329,11 @@ return {
           type: line.type,
           sku: skuOf(line.item),
           qty,
+          inventoryId:clean(line.inventoryId),
+          inventorySerial:
+            clean(line.inventoryRecord?.SerialNumber),
+          inventoryStore:
+            clean(line.inventoryRecord?.Store),
           included: !!line.included,
           setupSelected: !!line.setupSelected,
           actualFreightCost:
@@ -12680,6 +12716,14 @@ function freightKey(v){
 function lineIsInStock(line){
   if(!configuratorHasCapability('inventory', true)) return false;
 
+  if(line?.specialOrder){
+    return false;
+  }
+
+  if(clean(line?.inventoryId)){
+    return true;
+  }
+
   const item = line?.item || {};
 
   const newMilfordQty =
@@ -14981,6 +15025,20 @@ function isTestConfigurator(){
   );
 }
 
+function inventoryConfirmationDetails(){
+  return state.cart
+    .filter(line => clean(line.inventoryId))
+    .map(line => ({
+      inventoryId:clean(line.inventoryId),
+      sku:skuOf(line.item),
+      description:nameOf(line.item),
+      quantity:Math.max(Number(line.qty) || 1, 1),
+      serialNumber:clean(line.inventoryRecord?.SerialNumber),
+      store:clean(line.inventoryRecord?.Store),
+      status:clean(line.inventoryRecord?.Status) || 'In Stock'
+    }));
+}
+
 async function sendQuoteLead(actionType){
 
    if(isTestConfigurator()){
@@ -15001,6 +15059,7 @@ async function sendQuoteLead(actionType){
     configurator: configuratorBrandId(),
     source: `${configuratorBrandName()} Equipment Configurator`,
     action: actionType || 'Confirm Price & Availability',
+    inventorySelections:inventoryConfirmationDetails(),
 
     salesperson: clean($('stihl-salesperson')?.value),
 
@@ -15076,6 +15135,7 @@ rebateEndDate: rebateEndDate(),
     selectedTool: state.selectedTool ? nameOf(state.selectedTool) : '',
     items: state.cart.map(line => ({
       qty: line.qty,
+      sku: skuOf(line.item),
       name: nameOf(line.item),
       price: line.included ? 'Included' : fmtMoney(priceOf(line.item)),
       lineTotal: line.included
@@ -15307,6 +15367,69 @@ function selectTool(){
   renderDeliveryOptions();
 renderCart();
 }
+
+function availableInventoryAllocationsForSku(sku, requestedQuantity){
+  const wanted = clean(sku).toUpperCase();
+  let remaining = Math.max(
+    Math.floor(Number(requestedQuantity) || 1),
+    0
+  );
+
+  const usedByInventoryId = new Map();
+  state.cart.forEach(line => {
+    const inventoryId = clean(line.inventoryId).toUpperCase();
+    if(!inventoryId) return;
+    usedByInventoryId.set(
+      inventoryId,
+      (usedByInventoryId.get(inventoryId) || 0) +
+        (Number(line.qty) || 1)
+    );
+  });
+
+  const privateRecords = (state.inventory || [])
+    .filter(record =>
+      clean(record.SKU).toUpperCase() === wanted &&
+      clean(record.Status).toUpperCase() === 'IN STOCK'
+    );
+
+  const publicAvailability =
+    state.inventoryAvailability instanceof Map
+      ? state.inventoryAvailability.get(wanted)
+      : null;
+
+  const publicRecords =
+    privateRecords.length === 0 &&
+    Array.isArray(publicAvailability?.selections)
+      ? publicAvailability.selections.map(selection => ({
+          InventoryID:selection.selectionId,
+          SKU:sku,
+          Quantity:selection.quantity,
+          Status:'In Stock',
+          PublicPricingGroup:selection.pricingGroup,
+          InboundFreight:selection.factoryFreight
+        }))
+      : [];
+
+  const allocations = [];
+  (privateRecords.length ? privateRecords : publicRecords)
+    .forEach(record => {
+      if(remaining <= 0) return;
+      const inventoryId = clean(record.InventoryID).toUpperCase();
+      if(!inventoryId) return;
+      const available = Math.max(
+        (Number(clean(record.Quantity)) || 1) -
+          (usedByInventoryId.get(inventoryId) || 0),
+        0
+      );
+      const quantity = Math.min(available, remaining);
+      if(quantity <= 0) return;
+      allocations.push({record, quantity});
+      remaining -= quantity;
+    });
+
+  return {allocations, remaining};
+}
+
 function addToolToQuote(){
   const sku = clean($('stihl-tool-select').value);
 
@@ -15318,9 +15441,31 @@ function addToolToQuote(){
   const tool = state.tools.find(t => skuOf(t) === sku);
   if(!tool) return;
 
-  const qty = Number($('stihl-tool-qty').value) || 1;
+  const qty = Math.min(
+    Math.max(Math.floor(Number($('stihl-tool-qty').value) || 1), 1),
+    100
+  );
 
-  addItem('tool', tool, qty, '');
+  const allocation =
+    availableInventoryAllocationsForSku(sku, qty);
+
+  allocation.allocations.forEach(stock => {
+    addItem(
+      'tool', tool, stock.quantity,
+      'In-stock inventory pricing',
+      false, true, false, '', stock.record, false
+    );
+  });
+
+  if(allocation.remaining > 0){
+    addItem(
+      'tool', tool, allocation.remaining,
+      'Normal pricing',
+      false, true, false, '', null, true
+    );
+  }
+
+  addRequiredItems(tool, qty);
 
   addIncludedPackageComponents(tool, qty);
 
@@ -15979,10 +16124,34 @@ function updateCartLineQuantity(cartIndex, nextQty){
   if(!line) return;
 
   const oldQty = Math.max(1, Number(line.qty) || 1);
-  const qty = Math.max(1, Number(nextQty) || 1);
+  let qty = Math.max(1, Number(nextQty) || 1);
   const parentSku = skuOf(line.item);
 
+  if(clean(line.inventoryId)){
+    const inventoryQuantityAvailable =
+      Math.max(Number(line.inventoryRecord?.Quantity) || 1, 1);
+
+    if(qty > inventoryQuantityAvailable){
+      qty = inventoryQuantityAvailable;
+      alert(
+        'Only ' + inventoryQuantityAvailable + ' unit' +
+        (inventoryQuantityAvailable === 1 ? '' : 's') +
+        ' of ' + parentSku +
+        ' are available at the inventory-specific price. ' +
+        'Add additional units using normal pricing.'
+      );
+    }
+  }
+
   line.qty = qty;
+
+  if(
+    clean(line.inventoryId) &&
+    clean(line.inventoryRecord?.InboundFreight) !== ''
+  ){
+    line.actualFreightCost =
+      money(line.inventoryRecord.InboundFreight) * qty;
+  }
 
   /*
     When a package parent quantity changes in Quote Summary, keep every
@@ -17624,7 +17793,7 @@ function addRequiredItems(parentItem, parentQty){
   requiredNumbers.forEach(addRequirementBranch);
 }
 
-    function addItem(type,item,qty,note,included,skipRequired,requiredItem,parentSku){
+    function addItem(type,item,qty,note,included,skipRequired,requiredItem,parentSku,inventoryRecord,specialOrder){
   qty = Number(qty) || 1;
 
   if(isThirdFunctionItem(item)){
@@ -17639,6 +17808,9 @@ function addRequiredItems(parentItem, parentQty){
     qty = Math.min(qty, remaining);
   }
 
+  const inventoryId =
+    clean(inventoryRecord?.InventoryID);
+
   const key =
   type +
   '|' +
@@ -17646,7 +17818,9 @@ function addRequiredItems(parentItem, parentQty){
   '|' +
   (included ? 'included' : '') +
   '|' +
-  clean(parentSku);
+  clean(parentSku) +
+  '|' +
+  inventoryId;
   const existing = state.cart.find(x => x.key === key);
 
   if(existing){
@@ -17665,7 +17839,13 @@ function addRequiredItems(parentItem, parentQty){
   included: !!included,
   requiredItem: !!requiredItem,
     parentSku: parentSku || '',
-  actualFreightCost: '',
+  inventoryId,
+  inventoryRecord: inventoryRecord || null,
+  specialOrder: !!specialOrder,
+  actualFreightCost:
+    inventoryId && clean(inventoryRecord?.InboundFreight) !== ''
+      ? money(inventoryRecord.InboundFreight) * qty
+      : '',
   setupSelected:
     assemblyOptionIsValid(item) &&
     !included
@@ -20964,6 +21144,10 @@ function privateDealerRows(data, dataset){
 
 function applyPrivateDealerData(data){
 
+  state.inventory =
+    privateDealerRows(data, "inventory")
+      .map(row => ({...row}));
+
   mergePrivateRows(
     state.tools,
     privateDealerRows(data, "products"),
@@ -21215,6 +21399,43 @@ async function restoreDealerSession(){
   }
 }
 
+function openDealerDashboard(event){
+  const token = clean(
+    sessionStorage.getItem(
+      dealerSessionStorageKey()
+    )
+  );
+
+  if(!token){
+    return;
+  }
+
+  event?.preventDefault();
+
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action =
+    CONFIGURATOR_API + '/dealer-dashboard-entry';
+  form.target = '_blank';
+  form.style.display = 'none';
+
+  [
+    ['brandId', configuratorBrandId()],
+    ['dealerSessionToken', token],
+    ['next', '/dashboard']
+  ].forEach(([name, value]) => {
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = name;
+    input.value = value;
+    form.appendChild(input);
+  });
+
+  document.body.appendChild(form);
+  form.submit();
+  form.remove();
+}
+
 function bindDealerMode(){
 
   const restoreRequested =
@@ -21245,6 +21466,11 @@ function bindDealerMode(){
   });
 
   $("dealerUnlockBtn").addEventListener("click", unlockDealer);
+
+  $("stihl-quote-dashboard")?.addEventListener(
+    "click",
+    openDealerDashboard
+  );
 
   $("dealerPasswordInput").addEventListener("keydown", function(e){
     if(e.key === "Enter") unlockDealer();
