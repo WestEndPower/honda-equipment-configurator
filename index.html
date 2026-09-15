@@ -6452,7 +6452,7 @@ $('stihl-category').addEventListener('change', () => {
   state.selectedSystemButton = '';
   state.selectedTool = null;
   $('stihl-tool-select').value = '';
-  updateSystemButtonVisibility();
+  renderPowerButtons();
   renderTools();
   renderToolDetails();
   renderAllOptions();
@@ -6460,25 +6460,21 @@ $('stihl-category').addEventListener('change', () => {
 });
 
  // POWER TYPE BUTTONS
-document.querySelectorAll('#stihl-power-buttons .stihl-series-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
+$('stihl-power-buttons')?.addEventListener('click', event => {
+  const btn = event.target.closest('.stihl-series-btn');
+  if(!btn) return;
 
-    document.querySelectorAll('#stihl-power-buttons .stihl-series-btn')
-      .forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#stihl-power-buttons .stihl-series-btn')
+    .forEach(button => button.classList.remove('active'));
 
-    btn.classList.add('active');
-
-    state.selectedPowerButton = clean(btn.dataset.power);
-
-    updateSystemButtonVisibility();
-
-    state.selectedTool = null;
-
-    renderTools();
-    renderToolDetails();
-    renderAllOptions();
-    renderKMARuntimeMatrix();
-  });
+  btn.classList.add('active');
+  state.selectedPowerButton = clean(btn.dataset.power);
+  updateSystemButtonVisibility();
+  state.selectedTool = null;
+  renderTools();
+  renderToolDetails();
+  renderAllOptions();
+  renderKMARuntimeMatrix();
 });
 
 if($('stihl-system-buttons')){
@@ -7779,6 +7775,11 @@ function renderCategories(){
 
     function renderPowerButtons(){
 
+  const category = clean($('stihl-category')?.value);
+  const relevantTools = state.tools.filter(tool =>
+    !category || clean(tool.Category) === category
+  );
+
   const preferredPowerOrder = [
     'Diesel',
     'Gas',
@@ -7788,7 +7789,7 @@ function renderCategories(){
 
   const availablePowers = [
     ...new Set(
-      state.tools
+      relevantTools
         .map(tool => clean(tool.PowerType))
         .filter(Boolean)
     )
@@ -7813,26 +7814,55 @@ function renderCategories(){
   });
 
   const hasCurrentPromotions =
-    state.tools.some(tool =>
-      toolHasCurrentPromotion(tool)
-    );
+    relevantTools.some(tool => toolHasCurrentPromotion(tool));
+
+  const hasInStock =
+    relevantTools.some(tool => onlineItemInStock(tool));
+
+  const availableFilters = new Set([
+    '',
+    ...powers.map(power => power.toUpperCase()),
+    ...(hasInStock ? ['IN_STOCK'] : []),
+    ...(hasCurrentPromotions ? ['PROMOTIONS'] : [])
+  ]);
+
+  if(!availableFilters.has(clean(state.selectedPowerButton).toUpperCase())){
+    state.selectedPowerButton = '';
+  }
+
+  const isActive = value =>
+    clean(state.selectedPowerButton).toUpperCase() ===
+    clean(value).toUpperCase();
 
   $('stihl-power-buttons').innerHTML =
     `
       <button
         type="button"
-        class="stihl-series-btn active"
+        class="stihl-series-btn ${isActive('') ? 'active' : ''}"
         data-power="">
         All Equipment
       </button>
     ` +
 
+    (
+      hasInStock
+        ? `
+          <button
+            type="button"
+            class="stihl-series-btn ${isActive('IN_STOCK') ? 'active' : ''}"
+            data-power="IN_STOCK">
+            ✓ In Stock
+          </button>
+        `
+        : ''
+    ) +
+
     powers.map(power => `
       <button
         type="button"
-        class="stihl-series-btn"
-        data-power="${power}">
-        ${power}
+        class="stihl-series-btn ${isActive(power) ? 'active' : ''}"
+        data-power="${escapeHtml(power)}">
+        ${escapeHtml(power)}
       </button>
     `).join('') +
 
@@ -7841,7 +7871,7 @@ function renderCategories(){
         ? `
           <button
             type="button"
-            class="stihl-series-btn"
+            class="stihl-series-btn ${isActive('PROMOTIONS') ? 'active' : ''}"
             data-power="PROMOTIONS">
             Current Promotions
           </button>
@@ -7958,7 +7988,13 @@ function renderTools(){
         Current Promotions is a special filter.
         Otherwise match the normal PowerType.
       */
-      if(power === 'PROMOTIONS'){
+      if(power === 'IN_STOCK'){
+
+        if(!onlineItemInStock(tool)){
+          return false;
+        }
+
+      }else if(power === 'PROMOTIONS'){
 
         if(!toolHasCurrentPromotion(tool)){
           return false;
@@ -9929,67 +9965,55 @@ function renderAvailability(item){
   const legacyShowsInventory =
     legacyNewMilford >= 1 ||
     legacyDanbury >= 1;
-
-  if(
-    (runtimeQuantity > 0 || runtimeOnOrder > 0) &&
-    !(runtimeQuantity === 0 && legacyShowsInventory)
-  ){
-    const availabilityParts = [];
-
-    if(runtimeQuantity > 0){
-      availabilityParts.push(`In Stock: ${runtimeQuantity}`);
-    }
-
-    if(runtimeOnOrder > 0){
-      availabilityParts.push(`On Order: ${runtimeOnOrder}`);
-    }
-
-    const inStock = runtimeQuantity > 0;
-
-    return `
-      <div style="
-        width:100%;
-        display:block;
-        border:2px solid ${inStock ? '#1f7a3a' : '#996515'};
-        background:${inStock ? '#f3fbf5' : '#fff8e6'};
-        color:${inStock ? '#1f7a3a' : '#7a4e00'};
-        margin-top:12px;
-        padding:10px 12px;
-        border-radius:12px;
-        box-sizing:border-box;
-        text-align:center;
-        font-size:18px;
-        font-weight:900;
-      ">
-        ${escapeHtml(availabilityParts.join(' | '))}
-      </div>
-    `;
-  }
+  const needsConfirmation =
+    state.inventoryAvailabilityLoaded &&
+    runtimeQuantity === 0 &&
+    legacyShowsInventory;
 
   if(
     state.inventoryAvailabilityLoaded &&
-    runtimeQuantity === 0 &&
-    legacyShowsInventory
+    (
+      runtimeQuantity > 0 ||
+      runtimeOnOrder > 0 ||
+      needsConfirmation
+    )
   ){
+    const inStockLine =
+      runtimeQuantity > 0
+        ? `✓ In Stock: ${runtimeQuantity} available`
+        : 'In Stock: 0 available';
+
+    const onOrderLine =
+      `On Order: ${runtimeOnOrder} incoming`;
+
+    const showContact =
+      runtimeOnOrder > 0 ||
+      needsConfirmation;
+
     return `
       <div style="
         width:100%;
         display:block;
-        border:2px solid #996515;
-        background:#fff8e6;
-        color:#7a4e00;
+        border:2px solid ${runtimeQuantity > 0 ? '#1f7a3a' : '#996515'};
+        background:${runtimeQuantity > 0 ? '#f3fbf5' : '#fff8e6'};
+        color:${runtimeQuantity > 0 ? '#1f7a3a' : '#7a4e00'};
         margin-top:12px;
-        padding:10px 12px;
+        padding:12px;
         border-radius:12px;
         box-sizing:border-box;
         text-align:center;
-        font-size:17px;
-        font-weight:900;
       ">
-        In Stock: 0 | On Order: ${runtimeOnOrder}<br>
-        <span style="font-size:14px;font-weight:700;">
-          Contact to confirm availability
-        </span>
+        <div style="font-size:18px;font-weight:900;">
+          ${escapeHtml(inStockLine)}
+        </div>
+        <div style="font-size:17px;font-weight:850;margin-top:5px;">
+          ${escapeHtml(onOrderLine)}
+        </div>
+        ${showContact ? `
+          <div style="font-size:14px;font-weight:700;margin-top:7px;">
+            Contact us for estimated availability.
+          </div>
+        ` : ''}
       </div>
     `;
   }
@@ -10001,74 +10025,43 @@ function renderAvailability(item){
   const nm = isTrue(item.QtyNewMilford);
   const db = isTrue(item.QtyDanbury);
   const note =
-  clean(item.AvailabilityNote) === '0'
-    ? ''
-    : clean(item.AvailabilityNote);
+    clean(item.AvailabilityNote) === '0'
+      ? ''
+      : clean(item.AvailabilityNote);
 
   const stores = [];
 
-  if(nm){
-    stores.push(`
-      <a class="stihl-store-link"
-         href="https://www.google.com/maps/search/?api=1&query=West+End+Power+Equipment+265+Danbury+Road+New+Milford+CT+06776"
-         target="_blank"
-         rel="noopener"
-         data-tooltip="West End Power Equipment&#10;265 Danbury Road&#10;New Milford, CT 06776&#10;&#10;Sales • Parts • Service&#10;&#10;Click for directions">
-         New Milford
-      </a>
-    `);
-  }
-
-  if(db){
-    stores.push(`
-      <a class="stihl-store-link"
-        href="https://www.google.com/maps/search/?api=1&query=West+End+Power+Equipment+56+Beaver+Brook+Road+Danbury+CT+06810"
-         target="_blank"
-         rel="noopener"
-         data-tooltip="West End Power Equipment&#10;56 Beaver Brook Road&#10;Danbury, CT 06810&#10;&#10;Sales • Parts • Service&#10;&#10;Click for directions">
-         Danbury
-      </a>
-    `);
-  }
+  if(nm) stores.push('New Milford');
+  if(db) stores.push('Danbury');
 
   if(!stores.length){
     return '';
   }
 
   return `
-  <div style="
-    width:100%;
-    display:block;
-    border:2px solid #1f7a3a;
-    background:#f3fbf5;
-    margin-top:12px;
-    padding:10px 12px;
-    border-radius:12px;
-    box-sizing:border-box;
-    text-align:center;
-  ">
-
     <div style="
       width:100%;
       display:block;
-      white-space:nowrap;
-      font-size:18px;
-      font-weight:900;
-      color:#1f7a3a;
-      margin-bottom:${note ? '8px' : '0'};
+      border:2px solid #1f7a3a;
+      background:#f3fbf5;
+      margin-top:12px;
+      padding:10px 12px;
+      border-radius:12px;
+      box-sizing:border-box;
+      text-align:center;
     ">
-      ✓ Normally Stocked In: ${stores.join(' & ')}
-    </div>
-
-    ${note ? `
-      <div class="stihl-small">
-        ${escapeHtml(note)}
+      <div style="font-size:18px;font-weight:900;color:#1f7a3a;">
+        ✓ Normally Stocked In: ${escapeHtml(stores.join(' & '))}
       </div>
-    ` : ''}
-
-  </div>
-`;
+      ${note ? `
+        <div class="stihl-small" style="margin-top:8px;">
+          ${escapeHtml(note)}
+        </div>
+      ` : ''}
+    </div>
+  `;
 }
+
 async function printSalesSheet(dealerWorksheet = false){
 
   const isDealer = dealerWorksheet;
