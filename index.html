@@ -1694,6 +1694,8 @@ const batteryCodes = [];
 
 const state = {
   tools: [],
+  inventoryAvailability: new Map(),
+  inventoryAvailabilityLoaded: false,
   packages: [],
   batteries: [],
   chargers: [],
@@ -5545,6 +5547,35 @@ const offerColumns =
   }
 }
 
+async function loadPublicInventoryAvailability(){
+  if(clean(CONFIGURATOR_API) === '') return [];
+
+  try{
+    const response = await fetch(
+      CONFIGURATOR_API + '/inventory-availability',
+      {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({brandId:ACTIVE_BRAND_ID}),
+        cache:'no-store'
+      }
+    );
+
+    const result = await response.json().catch(() => ({}));
+
+    if(!response.ok){
+      throw new Error(result.error || 'Inventory availability lookup failed.');
+    }
+
+    return Array.isArray(result.availability)
+      ? result.availability
+      : [];
+  }catch(error){
+    console.warn('Public inventory availability unavailable:', error);
+    return null;
+  }
+}
+
 function clearDealerDiscountControls(){
   const discount = $('stihl-dealer-discount');
   const custom = $('stihl-custom-discount');
@@ -5686,7 +5717,8 @@ async function init(){
   delivery,
   financePrograms,
   bidFleet,
-  freightRules
+  freightRules,
+  inventoryAvailability
 ] = await Promise.all([
   loadCSV(DATA_FILES.products),
   loadCSV(DATA_FILES.packages),
@@ -5700,7 +5732,8 @@ async function init(){
   loadCSV(DATA_FILES.delivery),
   loadCSV(DATA_FILES.financePrograms),
   loadCSV(DATA_FILES.bidFleet),
-  loadCSV(DATA_FILES.freightRules)
+  loadCSV(DATA_FILES.freightRules),
+  loadPublicInventoryAvailability()
 ]);
 
 const runtimeData = compatibility;
@@ -5918,6 +5951,15 @@ CompatibilityRows: compatibilityRows,
   })
   .filter(t => clean(t.Active) === '' || isTrue(t.Active))
   .sort(sortByOrder);
+
+state.inventoryAvailabilityLoaded = Array.isArray(inventoryAvailability);
+state.inventoryAvailability = new Map(
+  (inventoryAvailability || []).map(record => [
+    clean(record.sku).toUpperCase(),
+    record
+  ])
+);
+
         applyRuntimeBrandIdentity();
         state.batteries = batteries
   .map(battery => ({
@@ -8245,9 +8287,23 @@ function onlineInventoryAvailable(value){
   return Number.isFinite(qty) && qty > 0;
 }
 
+function runtimeInventoryForItem(item){
+  if(!item) return null;
+
+  return state.inventoryAvailability.get(
+    clean(skuOf(item)).toUpperCase()
+  ) || null;
+}
+
 function onlineItemInStock(item){
   if(!configuratorHasCapability('inventory', true)) return false;
   if(!item) return false;
+
+  const runtimeInventory = runtimeInventoryForItem(item);
+
+  if(state.inventoryAvailabilityLoaded){
+    return Number(runtimeInventory?.quantity || 0) > 0;
+  }
 
   return (
     onlineInventoryAvailable(item.QtyNewMilford) ||
@@ -9855,7 +9911,90 @@ window.location.href =
 
 function renderAvailability(item){
 
-  if(!item || !isTrue(item.DisplayAvailability)){
+  if(!item){
+    return '';
+  }
+
+  const runtimeInventory = runtimeInventoryForItem(item);
+  const runtimeQuantity = Math.max(Number(runtimeInventory?.quantity || 0), 0);
+  const runtimeOnOrder = Math.max(Number(runtimeInventory?.onOrderQuantity || 0), 0);
+  const legacyNewMilford = Math.max(
+    Number(clean(item.QtyNewMilford).replace(/,/g,'')) || 0,
+    0
+  );
+  const legacyDanbury = Math.max(
+    Number(clean(item.QtyDanbury).replace(/,/g,'')) || 0,
+    0
+  );
+  const legacyShowsInventory =
+    legacyNewMilford >= 1 ||
+    legacyDanbury >= 1;
+
+  if(
+    (runtimeQuantity > 0 || runtimeOnOrder > 0) &&
+    !(runtimeQuantity === 0 && legacyShowsInventory)
+  ){
+    const availabilityParts = [];
+
+    if(runtimeQuantity > 0){
+      availabilityParts.push(`In Stock: ${runtimeQuantity}`);
+    }
+
+    if(runtimeOnOrder > 0){
+      availabilityParts.push(`On Order: ${runtimeOnOrder}`);
+    }
+
+    const inStock = runtimeQuantity > 0;
+
+    return `
+      <div style="
+        width:100%;
+        display:block;
+        border:2px solid ${inStock ? '#1f7a3a' : '#996515'};
+        background:${inStock ? '#f3fbf5' : '#fff8e6'};
+        color:${inStock ? '#1f7a3a' : '#7a4e00'};
+        margin-top:12px;
+        padding:10px 12px;
+        border-radius:12px;
+        box-sizing:border-box;
+        text-align:center;
+        font-size:18px;
+        font-weight:900;
+      ">
+        ${escapeHtml(availabilityParts.join(' | '))}
+      </div>
+    `;
+  }
+
+  if(
+    state.inventoryAvailabilityLoaded &&
+    runtimeQuantity === 0 &&
+    legacyShowsInventory
+  ){
+    return `
+      <div style="
+        width:100%;
+        display:block;
+        border:2px solid #996515;
+        background:#fff8e6;
+        color:#7a4e00;
+        margin-top:12px;
+        padding:10px 12px;
+        border-radius:12px;
+        box-sizing:border-box;
+        text-align:center;
+        font-size:17px;
+        font-weight:900;
+      ">
+        In Stock: 0 | On Order: ${runtimeOnOrder}<br>
+        <span style="font-size:14px;font-weight:700;">
+          Contact to confirm availability
+        </span>
+      </div>
+    `;
+  }
+
+  if(!isTrue(item.DisplayAvailability)){
     return '';
   }
 
