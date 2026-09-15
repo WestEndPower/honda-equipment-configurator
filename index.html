@@ -9987,9 +9987,12 @@ function renderAvailability(item){
     const onOrderLine =
       `On Order: ${runtimeOnOrder} incoming`;
 
-    const showContact =
-      runtimeOnOrder > 0 ||
-      needsConfirmation;
+    const contactMessage =
+      runtimeOnOrder > 0
+        ? 'Contact us for estimated availability.'
+        : needsConfirmation
+          ? 'Normally stocked. Contact us to verify current availability.'
+          : '';
 
     return `
       <div style="
@@ -10010,9 +10013,9 @@ function renderAvailability(item){
         <div style="font-size:17px;font-weight:850;margin-top:5px;">
           ${escapeHtml(onOrderLine)}
         </div>
-        ${showContact ? `
+        ${contactMessage ? `
           <div style="font-size:14px;font-weight:700;margin-top:7px;">
-            Contact us for estimated availability.
+            ${escapeHtml(contactMessage)}
           </div>
         ` : ''}
       </div>
