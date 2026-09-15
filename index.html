@@ -7296,6 +7296,7 @@ const lineTotalDiscount =
 
 return {
           type: line.type,
+          sku: skuOf(line.item),
           qty,
           included: !!line.included,
           setupSelected: !!line.setupSelected,
@@ -7416,6 +7417,12 @@ const quoteData = {
   },
 
   lines: quoteLines,
+
+  salesperson:
+    clean($('stihl-salesperson')?.value),
+
+  preparedBy:
+    clean($('stihl-salesperson')?.value),
 
   customer: {
     name:
@@ -7642,6 +7649,22 @@ freight: (() => {
   };
 
 })(),
+
+factoryFreight:
+  freightFee(),
+
+specialOrderFreight:
+  freightSummary().rows
+    .filter(row =>
+      freightKey(row.applyWhen) === 'NOTINSTOCK'
+    )
+    .reduce(
+      (sum, row) => sum + money(row.amount),
+      0
+    ),
+
+freightTotal:
+  freightFee(),
 
 delivery:
   money(

@@ -1,2 +1,3 @@
 ﻿Name,Active,Email,LocationID,Phone,SalespersonID,SortOrder,Title
 John,T,sales@westendpower.com,NM,860-355-8722,SP-JOHN,1,Sales
+Chris,T,dawepe@westendpower.com,DA,203-792-3030,SP-CHRIS,2,Sales
