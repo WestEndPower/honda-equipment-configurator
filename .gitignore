@@ -7,3 +7,9 @@ Publish-PriceTags.ps1
 Publish-PriceTags.cmd
 Install-PriceTagButton.ps1
 Install-PriceTagButton.cmd
+
+# Generated Honda Dealer Spike reports
+WestEnd-Honda-Catalog-Report.csv
+WestEnd-Honda-Catalog.json
+catalog-link-reports/
+data/products.csv.before-dealerspike-catalog-links
