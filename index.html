@@ -5769,6 +5769,16 @@ async function init(){
 
 const runtimeData = compatibility;
 
+const publicInventorySkus = new Set(
+  (Array.isArray(inventoryAvailability) ? inventoryAvailability : [])
+    .filter(record =>
+      Math.max(Number(record?.quantity) || 0, 0) > 0 ||
+      Math.max(Number(record?.onOrderQuantity) || 0, 0) > 0
+    )
+    .map(record => clean(record?.sku).toUpperCase())
+    .filter(Boolean)
+);
+
     // Build battery IDs dynamically from batteries.csv
 // and compatibility-runtime.csv
 const discoveredBatteryIDs = new Set();
@@ -5980,7 +5990,11 @@ CompatibilityRows: compatibilityRows,
       Spec8Value: clean(product.SpecValue8)
     };
   })
-  .filter(t => clean(t.Active) === '' || isTrue(t.Active))
+  .filter(t =>
+    clean(t.Active) === '' ||
+    isTrue(t.Active) ||
+    publicInventorySkus.has(clean(t.SKU).toUpperCase())
+  )
   .sort(sortByOrder);
 
 state.inventoryAvailabilityLoaded = Array.isArray(inventoryAvailability);
@@ -7879,10 +7893,14 @@ function renderCategories(){
   const hasInStock =
     relevantTools.some(tool => onlineItemInStock(tool));
 
+  const hasOnOrder =
+    relevantTools.some(tool => onlineItemOnOrder(tool));
+
   const availableFilters = new Set([
     '',
     ...powers.map(power => power.toUpperCase()),
     ...(hasInStock ? ['IN_STOCK'] : []),
+    ...(hasOnOrder ? ['ON_ORDER'] : []),
     ...(hasCurrentPromotions ? ['PROMOTIONS'] : [])
   ]);
 
@@ -7912,6 +7930,19 @@ function renderCategories(){
             class="stihl-series-btn ${isActive('IN_STOCK') ? 'active' : ''}"
             data-power="IN_STOCK">
             ✓ In Stock
+          </button>
+        `
+        : ''
+    ) +
+
+    (
+      hasOnOrder
+        ? `
+          <button
+            type="button"
+            class="stihl-series-btn ${isActive('ON_ORDER') ? 'active' : ''}"
+            data-power="ON_ORDER">
+            On Order
           </button>
         `
         : ''
@@ -8051,6 +8082,12 @@ function renderTools(){
       if(power === 'IN_STOCK'){
 
         if(!onlineItemInStock(tool)){
+          return false;
+        }
+
+      }else if(power === 'ON_ORDER'){
+
+        if(!onlineItemOnOrder(tool)){
           return false;
         }
 
@@ -20815,6 +20852,15 @@ function webpageProducts(){
     const availability=webpageAvailability(item);
     return !stockOnly||availability.inStock>0||availability.onOrder>0||availability.usuallyStocked;
   }).sort(sortByOrder);
+}
+
+function onlineItemOnOrder(item){
+  if(!configuratorHasCapability('inventory', true)) return false;
+  if(!item || !state.inventoryAvailabilityLoaded) return false;
+
+  const runtimeInventory = runtimeInventoryForItem(item);
+
+  return Number(runtimeInventory?.onOrderQuantity || 0) > 0;
 }
 
 function webpageAvailability(item){
