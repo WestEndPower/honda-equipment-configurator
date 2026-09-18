@@ -646,22 +646,183 @@ body.dealer-mode .dealer-only{
 
 </div>
 
+<style>
+.stihl-webpage-order-list{
+  max-height:240px;
+  overflow:auto;
+  padding:8px;
+  border:1px solid #bbb;
+  border-radius:7px;
+  background:#f7f7f7
+}
+.stihl-webpage-order-row{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 72px;
+  gap:10px;
+  align-items:center;
+  padding:5px 0;
+  border-bottom:1px solid #ddd
+}
+.stihl-webpage-order-row:last-child{border-bottom:0}
+.stihl-webpage-order-row input{
+  width:100%;
+  box-sizing:border-box;
+  text-align:center
+}
+.stihl-webpage-section-title{
+  grid-column:1/-1;
+  margin:8px 0 0;
+  padding:10px 12px;
+  border-left:5px solid var(--stihl-orange);
+  background:#f2f2f2;
+  font-size:17px;
+  font-weight:900
+}
+.stihl-webpage-preview-shell{
+  margin-top:14px;
+  border:2px solid #222;
+  border-radius:10px;
+  overflow:hidden;
+  background:#fff
+}
+.stihl-webpage-preview-bar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:9px 12px;
+  background:#222;
+  color:#fff;
+  font-weight:900
+}
+.stihl-webpage-preview-frame{
+  display:block;
+  width:100%;
+  height:min(62vh,720px);
+  min-height:420px;
+  border:0;
+  background:#fff
+}
+@media(max-width:700px){
+  .stihl-webpage-preview-frame{height:520px;min-height:360px}
+}
+</style>
 <div id="stihl-webpage-modal" class="stihl-dealer-modal stihl-webpage-modal">
   <div class="stihl-dealer-box">
     <h3 style="margin-top:0;">Build / Update Dealer Spike Webpage</h3>
     <div class="stihl-webpage-fields">
+      <div class="stihl-webpage-section-title">Products and page content</div>
       <div><label for="stihl-webpage-category">Category</label><select id="stihl-webpage-category"></select></div>
-      <div><label for="stihl-webpage-filter">Products</label><select id="stihl-webpage-filter"><option value="stock">In Stock</option><option value="active">All Active</option></select></div>
-      <div><label for="stihl-webpage-category">Category</label><select id="stihl-webpage-category"></select></div>
-      <div><label for="stihl-webpage-filter">Products</label><select id="stihl-webpage-filter"><option value="stock">In Stock</option><option value="active">All Active</option></select></div>
-      <div><label for="stihl-webpage-filename">Page File Name</label><input id="stihl-webpage-filename" value="honda-snow-blowers-in-stock-ct"></div>
-      <div><label for="stihl-webpage-url">Published Page URL</label><input id="stihl-webpage-url" value="https://www.westendpower.com/honda-snow-blowers-in-stock-ct"></div>
+      <div><label for="stihl-webpage-filter">Products</label><select id="stihl-webpage-filter"><option value="inventory">In Stock &amp; On Order</option><option value="active">All Active</option></select></div>
+
+ <div style="grid-column:1/-1;">
+   <label>Specifications to Display</label>
+   <div style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 10px;">
+     <button type="button" id="stihl-webpage-spec-recommended">Recommended</button>
+     <button type="button" id="stihl-webpage-spec-all">Select All</button>
+     <button type="button" id="stihl-webpage-spec-clear">Clear All</button>
+   </div>
+   <div
+     id="stihl-webpage-specs"
+     style="
+       display:grid;
+       grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+       gap:7px 14px;
+       padding:12px;
+       border:1px solid #ddd;
+       border-radius:8px;
+       background:#fafafa;
+     "
+   ></div>
+   <small>Select up to six specifications for the cleanest two-column webpage layout.</small>
+ </div>
+
+      <div class="stihl-webpage-section-title">Layout, grouping and model order</div>
+      <div>
+        <label for="stihl-webpage-group-1">First Group By</label>
+        <select id="stihl-webpage-group-1">
+          <option value="PowerType">Power Type</option>
+          <option value="Series">Series</option>
+          <option value="SubCategory">Subcategory</option>
+          <option value="">No Group</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="stihl-webpage-group-2">Second Group By</label>
+        <select id="stihl-webpage-group-2">
+          <option value="Series">Series</option>
+          <option value="SubCategory">Subcategory</option>
+          <option value="PowerType">Power Type</option>
+          <option value="">No Group</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="stihl-webpage-group-3">Third Group By</label>
+        <select id="stihl-webpage-group-3">
+          <option value="SubCategory">Subcategory</option>
+          <option value="Series">Series</option>
+          <option value="PowerType">Power Type</option>
+          <option value="">No Group</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="stihl-webpage-model-sort">Sort Models Within Groups</label>
+        <select id="stihl-webpage-model-sort">
+          <option value="workbook">Workbook Sort Order</option>
+          <option value="price-low">Price: Low to High</option>
+          <option value="price-high">Price: High to Low</option>
+          <option value="model-az">Model: A to Z</option>
+          <option value="model-za">Model: Z to A</option>
+        </select>
+      </div>
+      <div>
+        <label for="stihl-webpage-columns">Cards Per Row</label>
+        <select id="stihl-webpage-columns">
+          <option value="2" selected>2 Across</option>
+          <option value="3">3 Across</option>
+          <option value="4">4 Across</option>
+        </select>
+      </div>
+      <div class="stihl-webpage-section-title">Choose which groups appear and their order</div>
+      <div>
+        <label>Power Type Include / Order</label>
+        <div id="stihl-webpage-power-order" class="stihl-webpage-order-list"></div>
+      </div>
+      <div>
+        <label>Series Include / Order</label>
+        <div id="stihl-webpage-series-order" class="stihl-webpage-order-list"></div>
+      </div>
+      <div>
+        <label>Subcategory Include / Order</label>
+        <div id="stihl-webpage-subcategory-order" class="stihl-webpage-order-list"></div>
+      </div>
+
+      <div class="stihl-note" style="grid-column:1/-1;">
+        Enter 1, 2, 3, and so on to include and order groups.
+        Enter 0 or leave blank to exclude a group.
+        Make at least one positive selection in Power Type, Series, or Subcategory.
+      </div>
+      <div><label for="stihl-webpage-filename">Page File Name</label><input id="stihl-webpage-filename" value="honda-equipment-in-stock-ct"></div>
+      <div><label for="stihl-webpage-url">Published Page URL</label><input id="stihl-webpage-url" value="https://www.westendpower.com/honda-equipment-in-stock-ct"></div>
+      <div><label for="stihl-webpage-seo-title">SEO Title</label><input id="stihl-webpage-seo-title" maxlength="70" value="Honda Equipment for Sale in CT | West End Power"></div>
+      <div><label for="stihl-webpage-seo-description">Meta Description</label><input id="stihl-webpage-seo-description" maxlength="170" value="Compare Honda equipment models, specifications, inventory, prices, rebates and financing at West End Power in New Milford and Danbury, Connecticut."></div>
+      <div><label for="stihl-webpage-og-image">Social Share Image URL (optional)</label><input id="stihl-webpage-og-image" type="url" placeholder="https://www.westendpower.com/path/image.jpg"></div>
+      <div><label for="stihl-webpage-index"><input id="stihl-webpage-index" type="checkbox" checked> Allow search engines to index this page</label></div>
     </div>
     <button class="stihl-btn" id="stihl-generate-webpage" type="button">Generate Page</button>
     <div id="stihl-webpage-status" class="stihl-note">Choose a category and generate the current page.</div>
     <div id="stihl-webpage-report" class="stihl-webpage-report"></div>
+    <label for="stihl-webpage-head-code"><strong>Dealer Spike SEO / Head Code</strong></label>
+    <textarea id="stihl-webpage-head-code" spellcheck="false" aria-label="Generated Dealer Spike SEO head code" style="min-height:220px"></textarea>
     <textarea id="stihl-webpage-code" spellcheck="false" aria-label="Generated Dealer Spike HTML"></textarea>
-    <div class="stihl-btn-row" style="margin-top:12px;"><button class="stihl-btn" id="stihl-copy-webpage" type="button">Copy Dealer Spike Code</button><button class="stihl-btn light" id="stihl-download-webpage" type="button">Download HTML</button><button class="stihl-btn light" id="stihl-close-webpage" type="button">Close</button></div>
+    <div class="stihl-btn-row" style="margin-top:12px;"><button class="stihl-btn" id="stihl-preview-webpage" type="button">Refresh Preview</button><button class="stihl-btn" id="stihl-open-preview-webpage" type="button">Open Preview in New Tab</button><button class="stihl-btn" id="stihl-copy-webpage" type="button">Copy Dealer Spike Body Code</button><button class="stihl-btn" id="stihl-copy-webpage-head" type="button">Copy SEO Head Code</button><button class="stihl-btn light" id="stihl-download-webpage" type="button">Download Complete HTML</button><button class="stihl-btn light" id="stihl-close-webpage" type="button">Close</button></div>
+    <div class="stihl-webpage-preview-shell">
+      <div class="stihl-webpage-preview-bar"><span>Live Page Preview</span><small id="stihl-webpage-preview-label">Generate the page to preview it here.</small></div>
+      <iframe id="stihl-webpage-preview-frame" class="stihl-webpage-preview-frame" title="Generated Honda webpage preview" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"></iframe>
+    </div>
   </div>
 </div>
   <!-- =========================================================
@@ -20842,18 +21003,6 @@ const PUBLIC_CONFIG_URL =
     .split('?')[0]
     .split('#')[0];
 
-function webpageProducts(){
-  const category=clean($('stihl-webpage-category')?.value);
-  const stockOnly=clean($('stihl-webpage-filter')?.value)==='stock';
-  return state.tools.filter(item=>{
-    if(clean(item.Category)!==category) return false;
-    if(clean(item.Active)!==''&&!isTrue(item.Active)) return false;
-    if(clean(item.DisplayAvailability)!==''&&!isTrue(item.DisplayAvailability)) return false;
-    const availability=webpageAvailability(item);
-    return !stockOnly||availability.inStock>0||availability.onOrder>0||availability.usuallyStocked;
-  }).sort(sortByOrder);
-}
-
 function onlineItemOnOrder(item){
   if(!configuratorHasCapability('inventory', true)) return false;
   if(!item || !state.inventoryAvailabilityLoaded) return false;
@@ -20863,36 +21012,145 @@ function onlineItemOnOrder(item){
   return Number(runtimeInventory?.onOrderQuantity || 0) > 0;
 }
 
-function webpageAvailability(item){
-  const runtime=runtimeInventoryForItem(item);
-  const inStock=state.inventoryAvailabilityLoaded
-    ? Math.max(Number(runtime?.quantity)||0,0)
-    : 0;
-  const onOrder=state.inventoryAvailabilityLoaded
-    ? Math.max(Number(runtime?.onOrderQuantity)||0,0)
-    : 0;
-  const masterUsuallyStocked=
-    onlineInventoryAvailable(item.QtyNewMilford)||
-    onlineInventoryAvailable(item.QtyDanbury);
+function liveInventoryQuantity(item){
+  if(!state.inventoryAvailabilityLoaded || !item){
+    return null;
+  }
 
-  return {
-    inStock,
-    onOrder,
-    usuallyStocked:
-      state.inventoryAvailabilityLoaded&&
-      inStock===0&&
-      onOrder===0&&
-      masterUsuallyStocked
-  };
+  const availability=runtimeInventoryForItem(item);
+
+  return Math.max(Number(availability?.quantity)||0,0);
+}
+
+function liveOnOrderQuantity(item){
+  if(!state.inventoryAvailabilityLoaded || !item){
+    return null;
+  }
+
+  const availability=runtimeInventoryForItem(item);
+
+  return Math.max(Number(availability?.onOrderQuantity)||0,0);
+}
+function webpageProducts(){
+  const category=clean($('stihl-webpage-category')?.value);
+  const inventoryOnly=clean($('stihl-webpage-filter')?.value)==='inventory';
+
+  return state.tools.filter(item=>{
+    if(clean(item.Category)!==category) return false;
+    if(!isTrue(item.Active)) return false;
+
+    if(
+      clean(item.DisplayAvailability)!=='' &&
+      !isTrue(item.DisplayAvailability)
+    ) return false;
+
+    if(!webpageItemIncludedByOrders(item)) return false;
+
+    return !inventoryOnly ||
+      onlineItemInStock(item) ||
+      onlineItemOnOrder(item);
+  }).sort(webpageCompareForDisplay);
+}
+
+const webpageSpecSelectionsByCategory=new Map();
+
+function webpageAvailableSpecLabels(){
+  const labels=[];
+  const found=new Set();
+
+  webpageCategoryProducts().forEach(item=>{
+    for(let i=1;i<=10;i++){
+      const label=clean(item[`SpecLabel${i}`]);
+
+      if(label&&!found.has(label)){
+        found.add(label);
+        labels.push(label);
+      }
+    }
+  });
+
+  return labels;
+}
+
+function webpageSelectedSpecLabels(){
+  const container=$('stihl-webpage-specs');
+
+  if(!container) return [];
+
+  return [...container.querySelectorAll('input[data-webpage-spec]:checked')]
+    .map(input=>clean(input.dataset.webpageSpec))
+    .filter(Boolean);
+}
+
+function saveWebpageSpecSelections(){
+  const category=clean($('stihl-webpage-category')?.value);
+
+  if(category){
+    webpageSpecSelectionsByCategory.set(
+      category,
+      webpageSelectedSpecLabels()
+    );
+  }
+}
+
+function populateWebpageSpecs(useRecommended=false){
+  const container=$('stihl-webpage-specs');
+  if(!container) return;
+
+  const category=clean($('stihl-webpage-category')?.value);
+  const labels=webpageAvailableSpecLabels();
+  const saved=webpageSpecSelectionsByCategory.get(category);
+
+  const selected=new Set(
+    useRecommended || !saved
+      ? labels.slice(0,6)
+      : saved
+  );
+
+  container.innerHTML=labels.length
+    ? labels.map(label=>
+        `<label style="display:flex;align-items:center;gap:7px;margin:0;">`+
+        `<input type="checkbox" data-webpage-spec="${escapeHtml(label)}"`+
+        `${selected.has(label)?' checked':''}>`+
+        `<span>${escapeHtml(label)}</span></label>`
+      ).join('')
+    : '<span>No specifications are populated for this category.</span>';
+
+  container
+    .querySelectorAll('input[data-webpage-spec]')
+    .forEach(input=>{
+      input.addEventListener('change',saveWebpageSpecSelections);
+    });
+
+  saveWebpageSpecSelections();
+}
+
+function setAllWebpageSpecs(checked){
+  const container=$('stihl-webpage-specs');
+  if(!container) return;
+
+  container
+    .querySelectorAll('input[data-webpage-spec]')
+    .forEach(input=>{
+      input.checked=checked;
+    });
+
+  saveWebpageSpecSelections();
 }
 
 function webpageSpecs(item){
+  const selected=new Set(webpageSelectedSpecLabels());
   const rows=[];
+
   for(let i=1;i<=10;i++){
     const label=clean(item[`SpecLabel${i}`]);
     const value=clean(item[`SpecValue${i}`]);
-    if(label&&value) rows.push([label,value]);
+
+    if(label&&value&&selected.has(label)){
+      rows.push([label,value]);
+    }
   }
+
   return rows.slice(0,6);
 }
 
@@ -20902,9 +21160,229 @@ function webpageSlug(value){
 
 function populateWebpageCategories(){
   const select=$('stihl-webpage-category');
-  const categories=[...new Set(state.tools.map(item=>clean(item.Category)).filter(Boolean))].sort();
-  select.innerHTML=categories.map(category=>`<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`).join('');
-  if(categories.includes('Snow Blowers')) select.value='Snow Blowers';
+  const categories=[...new Set(
+    state.tools
+      .filter(item=>isTrue(item.Active))
+      .map(item=>clean(item.Category))
+      .filter(Boolean)
+  )].sort();
+
+  select.innerHTML=categories
+    .map(category=>
+      `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`
+    )
+    .join('');
+
+  if(categories.includes('Snow Blowers')){
+    select.value='Snow Blowers';
+  }
+
+  populateWebpageDisplayOrders();
+  populateWebpageSpecs();
+}
+
+function webpageCategoryProducts(){
+  const category=clean($('stihl-webpage-category')?.value);
+
+  return state.tools.filter(item=>
+    isTrue(item.Active) &&
+    clean(item.Category)===category
+  );
+}
+
+function webpageDistinctValues(field){
+  const firstPosition=new Map();
+
+  webpageCategoryProducts().forEach((item,index)=>{
+    const value=clean(item[field]);
+
+    if(value&&!firstPosition.has(value)){
+      firstPosition.set(value,index);
+    }
+  });
+
+  return [...firstPosition.keys()].sort(
+    (a,b)=>firstPosition.get(a)-firstPosition.get(b)
+  );
+}
+
+function webpageOrderContainer(field){
+  const id={
+    PowerType:'stihl-webpage-power-order',
+    Series:'stihl-webpage-series-order',
+    SubCategory:'stihl-webpage-subcategory-order'
+  }[field];
+
+  return $(id);
+}
+
+function webpageCurrentOrderValues(field){
+  const container=webpageOrderContainer(field);
+  const values=new Map();
+
+  if(!container) return values;
+
+  container
+    .querySelectorAll('input[data-webpage-value]')
+    .forEach(input=>{
+      values.set(
+        clean(input.dataset.webpageValue),
+        clean(input.value)
+      );
+    });
+
+  return values;
+}
+
+function populateWebpageOrderInput(field,id){
+  const container=$(id);
+  if(!container) return;
+
+  const current=webpageCurrentOrderValues(field);
+  const available=webpageDistinctValues(field);
+
+  container.innerHTML='';
+
+  available.forEach((value,index)=>{
+    const row=document.createElement('div');
+    row.className='stihl-webpage-order-row';
+
+    const label=document.createElement('span');
+    label.textContent=value;
+
+    const input=document.createElement('input');
+    input.type='number';
+    input.min='0';
+    input.step='1';
+    input.dataset.webpageValue=value;
+    input.setAttribute('aria-label',`${value} page order`);
+
+    input.value=current.has(value)
+      ? current.get(value)
+      : String(index+1);
+
+    row.append(label,input);
+    container.appendChild(row);
+  });
+}
+
+function populateWebpageDisplayOrders(){
+  populateWebpageOrderInput(
+    'PowerType',
+    'stihl-webpage-power-order'
+  );
+
+  populateWebpageOrderInput(
+    'Series',
+    'stihl-webpage-series-order'
+  );
+
+  populateWebpageOrderInput(
+    'SubCategory',
+    'stihl-webpage-subcategory-order'
+  );
+}
+
+function webpageSelectedGroupFields(){
+  const fields=[
+    clean($('stihl-webpage-group-1')?.value),
+    clean($('stihl-webpage-group-2')?.value),
+    clean($('stihl-webpage-group-3')?.value)
+  ].filter(Boolean);
+
+  return [...new Set(fields)];
+}
+
+function webpageConfiguredOrder(field){
+  const container=webpageOrderContainer(field);
+
+  if(!container) return [];
+
+  return [...container.querySelectorAll('input[data-webpage-value]')]
+    .map(input=>({
+      value:clean(input.dataset.webpageValue),
+      order:Number(clean(input.value))
+    }))
+    .filter(row=>
+      row.value &&
+      Number.isFinite(row.order) &&
+      row.order>0
+    )
+    .sort((a,b)=>
+      a.order-b.order ||
+      a.value.localeCompare(b.value,undefined,{numeric:true})
+    )
+    .map(row=>row.value);
+}
+
+function webpageItemIncludedByOrders(item){
+  const fields=['PowerType','Series','SubCategory'];
+
+  const selections=fields.flatMap(field=>
+    webpageConfiguredOrder(field).map(value=>({
+      field,
+      value
+    }))
+  );
+
+  if(!selections.length){
+    return false;
+  }
+
+  return selections.some(selection=>
+    clean(item[selection.field])===selection.value
+  );
+}
+
+function webpageGroupRank(field,value){
+  const order=webpageConfiguredOrder(field);
+  const index=order.indexOf(clean(value));
+  return index<0 ? 9999 : index;
+}
+
+function webpageCompareModels(a,b){
+  const option=clean($('stihl-webpage-model-sort')?.value);
+
+  if(option==='price-low'){
+    return priceOf(a)-priceOf(b) || sortByOrder(a,b);
+  }
+
+  if(option==='price-high'){
+    return priceOf(b)-priceOf(a) || sortByOrder(a,b);
+  }
+
+  const aModel=clean(a.Model||a.Description);
+  const bModel=clean(b.Model||b.Description);
+
+  if(option==='model-az'){
+    return aModel.localeCompare(bModel,undefined,{numeric:true});
+  }
+
+  if(option==='model-za'){
+    return bModel.localeCompare(aModel,undefined,{numeric:true});
+  }
+
+  return sortByOrder(a,b);
+}
+
+function webpageCompareForDisplay(a,b){
+  for(const field of webpageSelectedGroupFields()){
+    const rankDifference=
+      webpageGroupRank(field,a[field])-
+      webpageGroupRank(field,b[field]);
+
+    if(rankDifference) return rankDifference;
+
+    const valueDifference=clean(a[field]).localeCompare(
+      clean(b[field]),
+      undefined,
+      {numeric:true}
+    );
+
+    if(valueDifference) return valueDifference;
+  }
+
+  return webpageCompareModels(a,b);
 }
 
 function updateWebpageDefaults(){
@@ -20912,70 +21390,1269 @@ function updateWebpageDefaults(){
   const slug=`${webpageSlug(configuratorBrandId())}-${webpageSlug(category)}-in-stock-ct`;
   $('stihl-webpage-filename').value=slug;
   $('stihl-webpage-url').value=`https://www.westendpower.com/${slug}`;
+  $('stihl-webpage-seo-title').value=
+    `${configuratorBrandName()} ${category} for Sale in CT | West End Power`;
+  $('stihl-webpage-seo-description').value=
+    `Compare ${configuratorBrandName()} ${category.toLowerCase()} models, specifications, `+
+    `inventory, prices, rebates and financing `+
+    `at West End Power in New Milford and Danbury, Connecticut.`;
 }
 
 function generateDealerSpikeWebpage(){
   const category=clean($('stihl-webpage-category')?.value);
+  const inventoryOnly=clean($('stihl-webpage-filter')?.value)==='inventory';
+
+  const groupLabels={
+    PowerType:'Power Type',
+    Series:'Series',
+    SubCategory:'Subcategory'
+  };
+
+  const hasSelection=[
+    'PowerType',
+    'Series',
+    'SubCategory'
+  ].some(field=>webpageConfiguredOrder(field).length>0);
+
+  if(!hasSelection){
+    $('stihl-webpage-status').className='stihl-error';
+    $('stihl-webpage-status').textContent=
+      'Select at least one Power Type, Series, or Subcategory to include.';
+    $('stihl-webpage-code').value='';
+    $('stihl-webpage-report').innerHTML='';
+    return;
+  }
+
   const products=webpageProducts();
+
   if(!products.length){
     $('stihl-webpage-status').className='stihl-error';
-    $('stihl-webpage-status').textContent='No matching active products were found.';
+    $('stihl-webpage-status').textContent=
+      'No matching active products were found.';
     $('stihl-webpage-code').value='';
     return;
   }
-  const missingImages=products.filter(item=>!imageOf(item)).map(skuOf);
-  const missingUrls=products.filter(item=>!clean(item.ProductURL)).map(skuOf);
-  const missingSpecs=products.filter(item=>!webpageSpecs(item).length).map(skuOf);
-  const cards=products.map(item=>{
-    const sku=skuOf(item),model=clean(item.Model),image=imageOf(item),details=clean(item.ProductURL);
-    const configure=`${PUBLIC_CONFIG_URL}?category=${encodeURIComponent(category)}&sku=${encodeURIComponent(sku)}`;
-    const price=`${PUBLIC_CONFIG_URL}price-tags/${encodeURIComponent(sku)}.pdf`;
-    const specs=webpageSpecs(item).map(([label,value])=>`<li><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span></li>`).join('');
-    const availability=webpageAvailability(item);
-    const status=availability.inStock>0
-      ? 'In Stock'
-      : availability.onOrder>0
-        ? 'On Order'
-        : availability.usuallyStocked
-          ? 'Usually Stocked'
-          : 'Confirm Availability';
-    const availabilityText=availability.inStock>0
-      ? `${availability.inStock} available at West End Power`
-      : availability.onOrder>0
-        ? `${availability.onOrder} currently on order`
-        : availability.usuallyStocked
-          ? 'Usually stocked - confirm current availability'
+
+  const rawPageUrl=clean($('stihl-webpage-url')?.value);
+  let pageUrl='';
+
+  try{
+    const parsedPageUrl=new URL(rawPageUrl);
+    parsedPageUrl.hash='';
+    parsedPageUrl.search='';
+
+    if(parsedPageUrl.protocol!=='https:' || parsedPageUrl.hostname!=='www.westendpower.com'){
+      throw new Error('Use the secure www.westendpower.com production URL.');
+    }
+
+    pageUrl=parsedPageUrl.href.replace(/\/$/,'');
+  }catch(error){
+    $('stihl-webpage-status').className='stihl-error';
+    $('stihl-webpage-status').textContent=
+      `Enter a valid published West End Power URL. ${error.message || ''}`;
+    return;
+  }
+
+  const WEBPAGE_PUBLIC_CONFIG_URL=
+    'https://westendpower.github.io/honda-equipment-configurator/';
+
+  function absoluteWebpageUrl(value){
+    const url=clean(value);
+    if(!url) return '';
+
+    try{
+      return new URL(url,WEBPAGE_PUBLIC_CONFIG_URL).href;
+    }catch(error){
+      return url;
+    }
+  }
+
+  function webpageInventoryQuantity(item){
+    const live=liveInventoryQuantity(item);
+
+    if(live!==null){
+      return Math.max(Number(live)||0,0);
+    }
+
+    const wanted=inventorySkuKey(skuOf(item));
+    const inventoryRecords=(Array.isArray(state.inventory)?state.inventory:[])
+      .filter(record=>inventorySkuKey(record.SKU)===wanted);
+
+    if(inventoryRecords.length){
+      return inventoryRecords
+        .filter(record=>
+          clean(record.Status).toLowerCase()==='in stock' &&
+          !clean(record.ReservedSalesOrder) &&
+          !clean(record.SoldSalesOrder)
+        )
+        .reduce(
+          (total,record)=>total+Math.max(Number(clean(record.Quantity))||0,0),
+          0
+        );
+    }
+
+    return (
+      Math.max(Number(clean(item.QtyNewMilford))||0,0)+
+      Math.max(Number(clean(item.QtyDanbury))||0,0)
+    );
+  }
+
+  function webpageOnOrderQuantity(item){
+    const live=liveOnOrderQuantity(item);
+    return live===null ? 0 : Math.max(Number(live)||0,0);
+  }
+
+  function webpagePromotionData(item){
+    const msrp=money(item.MSRP);
+    const activeSale=
+      isDateActive(item.SaleStartDate,item.SaleEndDate)
+        ? money(item.SalePrice)
+        : 0;
+    const currentPrice=activeSale || msrp;
+    const saleSavings=
+      activeSale>0 && msrp>activeSale
+        ? msrp-activeSale
+        : 0;
+
+    const rebateAmount=money(
+      clean(item.RebateToCustomer)!==''
+        ? item.RebateToCustomer
+        : item.CustomerRebateAmount
+    );
+
+    const activeRebate=
+      rebateAmount>0 &&
+      isDateActive(item.RebateStartDate,item.RebateEndDate)
+        ? rebateAmount
+        : 0;
+
+    const finance=bestPromoFinanceForTool(item);
+    const rebateFlag=
+      finance && clean(finance.RebateCompatible)!==''
+        ? finance.RebateCompatible
+        : finance?.RebateEligible;
+
+    const combines=
+      !finance ||
+      clean(rebateFlag)==='' ||
+      isTrue(rebateFlag);
+
+    const apr=money(finance?.APR);
+    const term=clean(finance?.TermMonths);
+
+    const financeLabel=finance
+      ? (
+          apr===0 && term
+            ? `0% for ${term} Months`
+            : clean(finance.DisplayLabel) ||
+              clean(finance.Label) ||
+              (term ? `${apr}% for ${term} Months` : clean(finance.ProgramName))
+        )
+      : '';
+
+    const offerDate=earliestPromoDateLabel(
+      saleSavings>0 ? item.SaleEndDate : '',
+      activeRebate>0 ? item.RebateEndDate : '',
+      finance?.PromoEndDate,
+      finance?.ProgramEndDate,
+      finance?.EndDate
+    );
+
+    return {
+      msrp,
+      activeSale,
+      currentPrice,
+      saleSavings,
+      activeRebate,
+      afterRebate:Math.max(currentPrice-activeRebate,0),
+      financeLabel,
+      combines,
+      offerDate
+    };
+  }
+
+  function renderWebpageRebateBadge(item){
+    const promotion=webpagePromotionData(item);
+
+    if(promotion.activeRebate<=0) return '';
+
+    return `<span class="wep-rebate-badge">`+
+      `<strong>${fmtMoney(promotion.activeRebate)} Rebate</strong>`+
+      (
+        promotion.offerDate
+          ? `<small>Ends ${escapeHtml(promotion.offerDate)}</small>`
+          : ''
+      )+
+      `</span>`;
+  }
+
+  function webpageCompactDetails(item){
+    const batteryEquipment=
+      /battery|electric/i.test(clean(item.PowerType)) ||
+      /battery/i.test(clean(item.Category));
+
+    if(batteryEquipment){
+      const batteryCode=clean(
+        item.KitBattery ||
+        item.IncludedBattery ||
+        item.BatteryID
+      );
+
+      const chargerCode=clean(
+        item.KitCharger ||
+        item.IncludedCharger ||
+        item.ChargerID
+      );
+
+      const battery=findBattery(batteryCode);
+      const charger=findCharger(chargerCode);
+
+      const batteryName=clean(
+        battery?.Model ||
+        battery?.BatteryID ||
+        batteryCode
+      );
+
+      const chargerName=clean(
+        charger?.Model ||
+        charger?.ChargerID ||
+        chargerCode
+      );
+
+      return [
+        batteryCode
+          ? `Includes ${batteryName || 'Battery'}`
+          : 'Battery Sold Separately',
+        chargerCode
+          ? `Includes ${chargerName || 'Charger'}`
+          : 'Charger Sold Separately'
+      ].join(' | ');
+    }
+
+    return webpageSpecs(item)
+      .slice(0,3)
+      .map(([label,value])=>`${clean(value)} ${clean(label)}`)
+      .join(' | ');
+  }
+
+  function renderWebpageOfferPanel(item){
+    const promotion=webpagePromotionData(item);
+
+    return `<div class="wep-offer">`+
+      `<div class="wep-prices">`+
+      (
+        promotion.msrp>0 &&
+        promotion.activeSale>0 &&
+        promotion.msrp!==promotion.activeSale
+          ? `<div><span>MSRP</span><s>${fmtMoney(promotion.msrp)}</s></div>`+
+            `<div><span>Discount</span><strong>-${fmtMoney(promotion.saleSavings)}</strong></div>`
+          : ''
+      )+
+      `<div class="wep-current-price">`+
+      `<span>${promotion.activeSale>0?'Sale Price':'Current Price'}</span>`+
+      `<strong>${promotion.currentPrice>0
+        ? fmtMoney(promotion.currentPrice)
+        : 'Contact Us'}</strong>`+
+      `</div></div>`+
+      (
+        promotion.activeRebate>0 || promotion.financeLabel
+          ? `<div class="wep-limited-offer">`+
+            `<span class="wep-limited-label">Additional Limited-Time Offer</span>`+
+            `<div class="wep-extra-row">`+
+            (
+              promotion.activeRebate>0
+                ? `<strong>${fmtMoney(promotion.activeRebate)} Factory Rebate</strong>`
+                : ''
+            )+
+            (
+              promotion.activeRebate>0 && promotion.financeLabel
+                ? `<b>${promotion.combines?'AND':'OR'}</b>`
+                : ''
+            )+
+            (
+              promotion.financeLabel
+                ? `<strong>${escapeHtml(promotion.financeLabel)}</strong>`
+                : ''
+            )+
+            `</div>`+
+            (
+              promotion.activeRebate>0
+                ? `<div class="wep-after-rebate">`+
+                  `<span>After Rebate</span>`+
+                  `<strong>${fmtMoney(promotion.afterRebate)}</strong>`+
+                  `</div>`
+                : ''
+            )+
+            (
+              promotion.offerDate
+                ? `<small>Valid through ${escapeHtml(promotion.offerDate)}</small>`
+                : ''
+            )+
+            `</div>`
+          : ''
+      )+
+      `</div>`;
+  }
+  function renderWebpageCard(item){
+    const sku=skuOf(item);
+    const model=clean(item.Model);
+    const fullDescription=clean(item.Description);
+    const title=
+      model ||
+      fullDescription ||
+      `${configuratorBrandName()} ${category}`;
+    const compactDetails=webpageCompactDetails(item);
+    const promotionBadge=renderWebpageRebateBadge(item);
+
+    const rawImage=clean(imageOf(item));
+    const image=rawImage
+      ? (
+          /^https?:\/\//i.test(rawImage)
+            ? rawImage
+            : `https://westendpower.github.io/honda-equipment-configurator/${rawImage.replace(/^\.?\//,'')}`
+        )
+      : '';
+    const details=absoluteWebpageUrl(item.ProductURL);
+
+    const inStockQuantity=webpageInventoryQuantity(item);
+    const onOrderQuantity=webpageOnOrderQuantity(item);
+
+    const status=
+      inStockQuantity>0
+        ? 'In Stock'
+        : onOrderQuantity>0
+          ? 'On Order'
+          : 'Available to Order';
+
+    const statusClass=
+      inStockQuantity>0
+        ? 'stock'
+        : onOrderQuantity>0
+          ? 'on-order'
+          : 'available';
+
+    const availability=
+      inStockQuantity>0
+        ? `${inStockQuantity} available at West End Power`
+        : onOrderQuantity>0
+          ? `${onOrderQuantity} currently on order`
           : 'Contact us for current availability';
-    return `<article class="wep-card"><div class="wep-media">${image?`<img src="${escapeHtml(image)}" alt="${escapeHtml(configuratorBrandName())} ${escapeHtml(model)} ${escapeHtml(category)}" loading="lazy">`:`<div class="wep-placeholder"><strong>${escapeHtml(model)}</strong><br>Image Coming Soon</div>`}<span>${escapeHtml(status)}</span></div><div class="wep-body"><h3>${escapeHtml(displayProductTitle(item))}</h3>${specs?`<ul class="wep-specs">${specs}</ul>`:''}<p><strong>Availability:</strong> ${escapeHtml(availabilityText)}</p><div class="wep-actions"><a class="primary" href="${price}" target="_blank" rel="noopener">View Price &amp; Payment Options</a><a href="${configure}" target="_blank" rel="noopener">Configure This Model</a>${details?`<a href="${escapeHtml(details)}" target="_blank" rel="noopener">${escapeHtml(configuratorBrandName())} Model Details</a>`:''}</div><small>SKU ${escapeHtml(sku)}</small></div></article>`;
-  }).join('');
-  const pageUrl=clean($('stihl-webpage-url').value);
-  const html=`<!-- Generated by West End Power ${escapeHtml(configuratorBrandName())} Configurator ${new Date().toLocaleString()} --><style>.wep-page{max-width:1180px;margin:auto;font:16px/1.5 Arial,sans-serif;color:#171717}.wep-hero{padding:34px 22px;border-radius:16px;background:#202020;color:#fff;text-align:center}.wep-hero h2{font-size:clamp(28px,5vw,46px);margin:0 0 10px}.wep-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px;margin:28px 0}.wep-card{overflow:hidden;border:1px solid #ccc;border-top:6px solid #c8102e;border-radius:14px;background:#fff}.wep-media{position:relative;min-height:260px;display:flex;align-items:center;justify-content:center;background:#f5f5f5}.wep-media img{width:100%;height:300px;object-fit:contain}.wep-media>span{position:absolute;right:12px;top:12px;background:#287a32;color:#fff;border-radius:20px;padding:6px 10px;font-weight:800}.wep-placeholder{text-align:center;font-size:22px}.wep-body{padding:20px}.wep-specs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0;list-style:none}.wep-specs li{padding:8px;border:1px solid #ddd;border-radius:7px;text-align:center}.wep-specs strong,.wep-specs span{display:block}.wep-specs span{font-size:11px}.wep-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0}.wep-actions a{display:flex;align-items:center;justify-content:center;min-height:46px;border:2px solid #171717;border-radius:7px;padding:8px;text-decoration:none;font-weight:800;text-align:center}.wep-actions .primary{grid-column:1/-1;background:#c8102e;color:#fff}@media(max-width:760px){.wep-grid{grid-template-columns:1fr}.wep-specs{grid-template-columns:repeat(2,1fr)}}</style><div class="wep-page"><section class="wep-hero"><p>Available in New Milford &amp; Danbury, Connecticut</p><h2>${escapeHtml(configuratorBrandName())} ${escapeHtml(category)} In Stock at West End Power</h2><p>Compare current inventory, product details and payment options, then configure the exact model online.</p></section><div class="wep-grid">${cards}</div><section class="wep-hero"><h2>Need Help Choosing?</h2><p>Call New Milford at 860-355-8722 or Danbury at 203-792-3030.</p></section><p style="font-size:12px">Inventory and pricing are subject to change until confirmed. Page: ${escapeHtml(pageUrl)}</p></div>`;
+
+    const configure=
+      `${WEBPAGE_PUBLIC_CONFIG_URL}?category=${encodeURIComponent(category)}`+
+      `&sku=${encodeURIComponent(sku)}`;
+
+    const price=
+      `${WEBPAGE_PUBLIC_CONFIG_URL}price-tags/${encodeURIComponent(sku)}.pdf`;
+
+
+
+    return `<article class="wep-card">`+
+      `<div class="wep-media">`+
+      (
+        image
+          ? `<img src="${escapeHtml(image)}" `+
+            `alt="${escapeHtml(title)}" loading="lazy">`
+          : `<div class="wep-placeholder">Image Coming Soon</div>`
+      )+
+      promotionBadge+
+      `<span class="wep-badge ${statusClass}">${status}</span>`+
+      `</div>`+
+      `<div class="wep-body">`+
+      `<h3 title="${escapeHtml(fullDescription || title)}">`+
+      `${escapeHtml(title)}</h3>`+
+      (
+        compactDetails
+          ? `<p class="wep-compact-details" `+
+            `title="${escapeHtml(compactDetails)}">`+
+            `${escapeHtml(compactDetails)}</p>`
+          : ''
+      )+
+      renderWebpageOfferPanel(item)+      `<p><strong>Availability:</strong> ${escapeHtml(availability)}</p>`+
+      `<div class="wep-actions">`+
+      `<a class="primary" href="${price}" target="_blank" rel="noopener">`+
+      `View Price &amp; Payment Options</a>`+
+      `<a href="${configure}" target="_blank" rel="noopener">`+
+      `Configure This Model</a>`+
+      (
+        details
+          ? `<a href="${escapeHtml(details)}" target="_blank" rel="noopener">`+
+            `${escapeHtml(configuratorBrandName())} Model Details</a>`
+          : ''
+      )+
+      `</div></div></article>`;
+  }
+
+  function webpageComparisonValue(item,label){
+    for(let i=1;i<=10;i++){
+      if(clean(item[`SpecLabel${i}`])===label){
+        return clean(item[`SpecValue${i}`]);
+      }
+    }
+
+    return '';
+  }
+
+  function webpageAvailabilityLabel(item){
+    const inStock=webpageInventoryQuantity(item);
+    const onOrder=webpageOnOrderQuantity(item);
+
+    if(inStock>0) return `${inStock} In Stock`;
+    if(onOrder>0) return `${onOrder} On Order`;
+    return 'Available to Order';
+  }
+
+  function webpageComparisonColumns(items){
+    const columns=[];
+
+    if(items.some(item=>clean(item.EngineBrand))){
+      columns.push({
+        label:'Engine Brand',
+        value:item=>clean(item.EngineBrand)
+      });
+    }
+
+    if(items.some(item=>clean(item.CuttingWidth))){
+      columns.push({
+        label:'Cutting Width',
+        value:item=>{
+          const value=clean(item.CuttingWidth);
+          return value && /^\d+(?:\.\d+)?$/.test(value)
+            ? `${value} in.`
+            : value;
+        }
+      });
+    }
+
+    webpageSelectedSpecLabels().forEach(label=>{
+      if(columns.length>=4) return;
+      if(columns.some(column=>column.label.toLowerCase()===label.toLowerCase())) return;
+
+      columns.push({
+        label,
+        value:item=>webpageComparisonValue(item,label)
+      });
+    });
+
+    return columns;
+  }
+
+  function renderWebpageComparison(items){
+    const columns=webpageComparisonColumns(items);
+    const rows=[...items]
+      .sort(webpageCompareForDisplay)
+      .map(item=>{
+        const sku=skuOf(item);
+        const model=clean(item.Model)||clean(item.Description)||sku;
+        const promotion=webpagePromotionData(item);
+        const configure=
+          `${WEBPAGE_PUBLIC_CONFIG_URL}?category=${encodeURIComponent(category)}`+
+          `&sku=${encodeURIComponent(sku)}`;
+
+        return `<tr>`+
+          `<th scope="row">${escapeHtml(model)}</th>`+
+          columns.map(column=>
+            `<td data-label="${escapeHtml(column.label)}">`+
+            `${escapeHtml(column.value(item)||'—')}</td>`
+          ).join('')+
+          `<td data-label="Price"><strong>${promotion.currentPrice>0
+            ? fmtMoney(promotion.currentPrice)
+            : 'Contact Us'}</strong></td>`+
+          `<td data-label="Availability">${escapeHtml(webpageAvailabilityLabel(item))}</td>`+
+          `<td data-label="Compare"><a href="${escapeHtml(configure)}" `+
+          `target="_blank" rel="noopener">View Model</a></td>`+
+          `</tr>`;
+      }).join('');
+
+    return `<section class="wep-seo-section wep-comparison" aria-labelledby="wep-compare-heading">`+
+      `<h2 id="wep-compare-heading">Compare ${escapeHtml(configuratorBrandName())} `+
+      `${escapeHtml(category)} Models</h2>`+
+      `<p>Compare current prices, availability and key specifications. `+
+      `Open any model to review its complete configuration and payment options.</p>`+
+      `<div class="wep-table-wrap"><table>`+
+      `<thead><tr><th scope="col">Model</th>`+
+      columns.map(column=>`<th scope="col">${escapeHtml(column.label)}</th>`).join('')+
+      `<th scope="col">Current Price</th><th scope="col">Availability</th>`+
+      `<th scope="col">Details</th></tr></thead>`+
+      `<tbody>${rows}</tbody></table></div></section>`;
+  }
+
+  function webpageNumericCuttingWidth(item){
+    const direct=Number.parseFloat(clean(item.CuttingWidth));
+    if(Number.isFinite(direct)) return direct;
+
+    for(let i=1;i<=10;i++){
+      const label=clean(item[`SpecLabel${i}`]);
+      if(/cutting width|deck width/i.test(label)){
+        const value=Number.parseFloat(clean(item[`SpecValue${i}`]));
+        if(Number.isFinite(value)) return value;
+      }
+    }
+
+    return 0;
+  }
+
+  function renderWebpageChoiceGuide(items){
+    const priced=items
+      .map(item=>({item,promotion:webpagePromotionData(item)}))
+      .filter(entry=>entry.promotion.currentPrice>0)
+      .sort((a,b)=>a.promotion.currentPrice-b.promotion.currentPrice);
+
+    const widest=[...items]
+      .map(item=>({item,width:webpageNumericCuttingWidth(item)}))
+      .filter(entry=>entry.width>0)
+      .sort((a,b)=>b.width-a.width)[0];
+
+    const available=items.find(item=>webpageInventoryQuantity(item)>0);
+    const choices=[];
+
+    if(priced[0]){
+      choices.push({
+        label:'Lowest current starting price',
+        item:priced[0].item,
+        detail:fmtMoney(priced[0].promotion.currentPrice)
+      });
+    }
+
+    if(widest){
+      choices.push({
+        label:'Largest listed cutting width',
+        item:widest.item,
+        detail:`${widest.width}-inch cutting width`
+      });
+    }
+
+    if(available){
+      choices.push({
+        label:'Available now',
+        item:available,
+        detail:webpageAvailabilityLabel(available)
+      });
+    }
+
+    const unique=[];
+    const seen=new Set();
+
+    choices.forEach(choice=>{
+      const sku=skuOf(choice.item);
+      if(!seen.has(sku)){
+        seen.add(sku);
+        unique.push(choice);
+      }
+    });
+
+    if(!unique.length) return '';
+
+    return `<section class="wep-seo-section" aria-labelledby="wep-choose-heading">`+
+      `<h2 id="wep-choose-heading">Ways to Narrow Your Choices</h2>`+
+      `<p>Start with the features that matter most for your property, workload and budget. `+
+      `These highlights use the current models and specifications listed on this page.</p>`+
+      `<div class="wep-choice-grid">`+
+      unique.slice(0,3).map(choice=>{
+        const item=choice.item;
+        const sku=skuOf(item);
+        const model=clean(item.Model)||clean(item.Description)||sku;
+        const configure=
+          `${WEBPAGE_PUBLIC_CONFIG_URL}?category=${encodeURIComponent(category)}`+
+          `&sku=${encodeURIComponent(sku)}`;
+
+        return `<article><span>${escapeHtml(choice.label)}</span>`+
+          `<h3>${escapeHtml(model)}</h3><p>${escapeHtml(choice.detail)}</p>`+
+          `<a href="${escapeHtml(configure)}" target="_blank" rel="noopener">`+
+          `Compare This Model</a></article>`;
+      }).join('')+
+      `</div></section>`;
+  }
+
+  function renderWebpageBuyingGuide(){
+    const categoryText=escapeHtml(category.toLowerCase());
+
+    return `<section class="wep-seo-section" aria-labelledby="wep-guide-heading">`+
+      `<h2 id="wep-guide-heading">Choosing the Right ${escapeHtml(configuratorBrandName())} `+
+      `${escapeHtml(category)}</h2>`+
+      `<p>The right ${categoryText} depends on how much area you maintain, `+
+      `how often you use the equipment and which features save you the most time. `+
+      `Compare power type, size, capacity, warranty and current availability before deciding.</p>`+
+      `<p>West End Power Equipment can help match the equipment to your application, `+
+      `explain current manufacturer offers and financing, and support the machine after the sale. `+
+      `Visit us in New Milford or Danbury, Connecticut.</p>`+
+      `</section>`;
+  }
+
+  function renderWebpageFaq(){
+    const questions=[
+      [
+        `Which ${configuratorBrandName()} ${category.toLowerCase()} model is right for me?`,
+        `Compare the models by power type, size, capacity, warranty, price and availability. `+
+        `West End Power can also help match a model to your property and intended use.`
+      ],
+      [
+        `Are these ${configuratorBrandName()} ${category.toLowerCase()} available now?`,
+        `The inventory sections show models currently in stock or on order. `+
+        `Availability can change, so confirm the unit before visiting or purchasing.`
+      ],
+      [
+        `Are financing and manufacturer promotions available?`,
+        `Eligible models display current pricing, rebates and financing information. `+
+        `Offer eligibility and expiration dates vary by model and payment method.`
+      ],
+      [
+        `Where can I buy ${configuratorBrandName()} equipment in Connecticut?`,
+        `West End Power Equipment serves customers from locations in New Milford and Danbury, Connecticut.`
+      ]
+    ];
+
+    return {
+      questions,
+      html:`<section class="wep-seo-section wep-faq" aria-labelledby="wep-faq-heading">`+
+        `<h2 id="wep-faq-heading">Frequently Asked Questions</h2>`+
+        questions.map(([question,answer])=>
+          `<details><summary>${escapeHtml(question)}</summary>`+
+          `<p>${escapeHtml(answer)}</p></details>`
+        ).join('')+
+        `</section>`
+    };
+  }
+
+  function webpageGroupLabel(field){
+    return {
+      PowerType:'Power Type',
+      Series:'Series',
+      SubCategory:'Subcategory'
+    }[field] || field;
+  }
+
+  function renderWebpageProductGroups(items){
+    const fields=webpageSelectedGroupFields();
+    const ordered=[...items].sort(webpageCompareForDisplay);
+
+    if(!fields.length){
+      return `<div class="wep-grid">`+
+        ordered.map(renderWebpageCard).join('')+
+        `</div>`;
+    }
+
+    const groups=new Map();
+
+    ordered.forEach(item=>{
+      const values=fields.map(field=>
+        clean(item[field]) || `Other ${webpageGroupLabel(field)}`
+      );
+
+      const key=JSON.stringify(values);
+
+      if(!groups.has(key)){
+        groups.set(key,{values,items:[]});
+      }
+
+      groups.get(key).items.push(item);
+    });
+
+    return [...groups.values()].map(group=>
+      `<div class="wep-subgroup">`+
+      `<h3>${group.values.map(escapeHtml).join(' / ')}</h3>`+
+      `<div class="wep-grid">`+
+      group.items.map(renderWebpageCard).join('')+
+      `</div></div>`
+    ).join('');
+  }
+
+  function renderWebpageFlatSection(title,introduction,items){
+    if(!items.length) return '';
+
+    return `<section class="wep-product-section">`+
+      `<div class="wep-section-heading">`+
+      `<h2>${escapeHtml(title)}</h2>`+
+      `<p>${escapeHtml(introduction)}</p>`+
+      `</div>`+
+      `<div class="wep-grid">`+
+      [...items]
+        .sort(webpageCompareModels)
+        .map(renderWebpageCard)
+        .join('')+
+      `</div></section>`;
+  }
+  function renderWebpageSection(title,introduction,items){
+    if(!items.length) return '';
+
+    return `<section class="wep-product-section">`+
+      `<div class="wep-section-heading">`+
+      `<h2>${escapeHtml(title)}</h2>`+
+      `<p>${escapeHtml(introduction)}</p>`+
+      `</div>`+
+      renderWebpageProductGroups(items)+
+      `</section>`;
+  }
+
+  const inStock=products.filter(
+    item=>webpageInventoryQuantity(item)>0
+  );
+
+  const onOrder=products.filter(item=>
+    webpageInventoryQuantity(item)<=0 &&
+    webpageOnOrderQuantity(item)>0
+  );
+
+  const inventoryProducts=[...inStock,...onOrder];
+
+  const other=products.filter(item=>
+    webpageInventoryQuantity(item)<=0 &&
+    webpageOnOrderQuantity(item)<=0
+  );
+
+  const inventorySection=renderWebpageFlatSection(
+    `${configuratorBrandName()} ${category} Available Now & On Order`,
+    'See models currently in stock or already on order at West End Power.',
+    inventoryProducts
+  );
+
+  const otherSection=inventoryOnly
+    ? ''
+    : renderWebpageSection(
+        `Explore Other ${configuratorBrandName()} ${category}`,
+        'Compare additional active models available to order.',
+        other
+      );
+
+  const sections=inventorySection+otherSection;
+
+  const missingImages=products.filter(item=>!imageOf(item)).map(skuOf);
+  const missingUrls=
+    products.filter(item=>!clean(item.ProductURL)).map(skuOf);
+  const missingSpecs=
+    products.filter(item=>!webpageSpecs(item).length).map(skuOf);
+
+  const cardsPerRow=
+    [2,3,4].includes(Number(clean($('stihl-webpage-columns')?.value)))
+      ? Number(clean($('stihl-webpage-columns')?.value))
+      : 2;
+  const seoTitle=clean($('stihl-webpage-seo-title')?.value) ||
+    `${configuratorBrandName()} ${category} for Sale in CT | West End Power`;
+  const seoDescription=clean($('stihl-webpage-seo-description')?.value) ||
+    `Compare ${configuratorBrandName()} ${category.toLowerCase()} prices, `+
+    `specifications, inventory, rebates and financing at West End Power `+
+    `in New Milford and Danbury, Connecticut.`;
+  const allowIndex=$('stihl-webpage-index')?.checked!==false;
+  const robotsContent=allowIndex?'index,follow':'noindex,nofollow';
+  const configuredSocialImage=absoluteWebpageUrl(
+    clean($('stihl-webpage-og-image')?.value)
+  );
+  const socialImage=configuredSocialImage ||
+    products.map(imageOf).map(absoluteWebpageUrl).find(Boolean) || '';
+  const comparisonSection=renderWebpageComparison(products);
+  const choiceGuide=renderWebpageChoiceGuide(products);
+  const buyingGuide=renderWebpageBuyingGuide();
+  const faq=renderWebpageFaq();
+  const updatedLabel=new Date().toLocaleDateString('en-US',{
+    year:'numeric',
+    month:'long',
+    day:'numeric'
+  });
+
+  const structuredDataObject={
+    '@context':'https://schema.org',
+    '@graph':[
+      {
+        '@type':'WebPage',
+        '@id':`${pageUrl}#webpage`,
+        url:pageUrl,
+        name:seoTitle,
+        description:seoDescription,
+        inLanguage:'en-US',
+        breadcrumb:{'@id':`${pageUrl}#breadcrumb`},
+        mainEntity:{'@id':`${pageUrl}#item-list`}
+      },
+      {
+        '@type':'BreadcrumbList',
+        '@id':`${pageUrl}#breadcrumb`,
+        itemListElement:[
+          {'@type':'ListItem',position:1,name:'Home',item:'https://www.westendpower.com/'},
+          {'@type':'ListItem',position:2,name:configuratorBrandName(),item:'https://www.westendpower.com/honda'},
+          {'@type':'ListItem',position:3,name:`${configuratorBrandName()} ${category}`,item:pageUrl}
+        ]
+      },
+      {
+        '@type':'ItemList',
+        '@id':`${pageUrl}#item-list`,
+        name:`${configuratorBrandName()} ${category}`,
+        url:pageUrl,
+        numberOfItems:products.length,
+        itemListElement:products.map((item,index)=>({
+          '@type':'ListItem',
+          position:index+1,
+          name:clean(item.Model)||clean(item.Description)||skuOf(item),
+          url:absoluteWebpageUrl(clean(item.ProductURL)) ||
+            `${WEBPAGE_PUBLIC_CONFIG_URL}?category=${encodeURIComponent(category)}`+
+            `&sku=${encodeURIComponent(skuOf(item))}`
+        }))
+      },
+      {
+        '@type':'FAQPage',
+        '@id':`${pageUrl}#faq`,
+        mainEntity:faq.questions.map(([question,answer])=>({
+          '@type':'Question',
+          name:question,
+          acceptedAnswer:{'@type':'Answer',text:answer}
+        }))
+      }
+    ]
+  };
+  const structuredData=JSON.stringify(structuredDataObject).replace(/</g,'\\u003c');
+
+  const headCode=[
+    `<title>${escapeHtml(seoTitle)}</title>`,
+    `<meta name="description" content="${escapeHtml(seoDescription)}">`,
+    `<meta name="robots" content="${robotsContent}">`,
+    `<link rel="canonical" href="${escapeHtml(pageUrl)}">`,
+    '<meta property="og:type" content="website">',
+    `<meta property="og:title" content="${escapeHtml(seoTitle)}">`,
+    `<meta property="og:description" content="${escapeHtml(seoDescription)}">`,
+    `<meta property="og:url" content="${escapeHtml(pageUrl)}">`,
+    socialImage?`<meta property="og:image" content="${escapeHtml(socialImage)}">`:'',
+    '<meta name="twitter:card" content="summary_large_image">',
+    `<script type="application/ld+json">${structuredData}<${'/'}script>`
+  ].filter(Boolean).join('\n');
+
+  const html=`<!-- Generated by West End Power ${escapeHtml(
+    configuratorBrandName()
+  )} Configurator ${new Date().toLocaleString()} -->
+<!-- SEO TITLE: ${escapeHtml(seoTitle)} -->
+<!-- META DESCRIPTION: ${escapeHtml(seoDescription)} -->
+<!-- CANONICAL URL: ${escapeHtml(pageUrl)} -->
+<style>
+.wep-page{max-width:1180px;margin:auto;font:16px/1.5 Arial,sans-serif;color:#171717}
+.wep-hero{padding:34px 22px;border-radius:16px;background:#202020;color:#fff;text-align:center}
+.wep-hero h1,.wep-hero h2{font-size:clamp(28px,5vw,46px);margin:0 0 10px}
+.wep-updated{margin:8px 0 0;font-size:13px;color:#eee}
+.wep-seo-section{margin:34px 0;padding:24px;border:1px solid #ddd;border-radius:14px;background:#fff}
+.wep-seo-section>h2{margin:0 0 10px;font-size:30px;line-height:1.2;text-align:center}
+.wep-seo-section>p{max-width:900px;margin:10px auto;text-align:center}
+.wep-table-wrap{margin-top:20px;overflow-x:auto;border:1px solid #ccc;border-radius:10px}
+.wep-comparison table{width:100%;border-collapse:collapse;min-width:760px}
+.wep-comparison th,.wep-comparison td{padding:11px;border-bottom:1px solid #ddd;text-align:left;vertical-align:middle}
+.wep-comparison thead th{background:#202020;color:#fff;white-space:nowrap}
+.wep-comparison tbody tr:nth-child(even){background:#f7f7f7}
+.wep-comparison tbody th{font-weight:800}
+.wep-comparison a{color:#a20d25;font-weight:800}
+.wep-choice-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:20px}
+.wep-choice-grid article{padding:18px;border-top:5px solid #c8102e;border-radius:9px;background:#f6f6f6;text-align:center}
+.wep-choice-grid article>span{font-size:12px;font-weight:900;text-transform:uppercase;color:#666}
+.wep-choice-grid h3{margin:7px 0;font-size:21px}
+.wep-choice-grid a{font-weight:800;color:#a20d25}
+.wep-faq details{max-width:900px;margin:10px auto;border:1px solid #ddd;border-radius:8px;padding:13px 16px;background:#fafafa}
+.wep-faq summary{cursor:pointer;font-weight:800}
+.wep-faq details p{margin:9px 0 0}
+.wep-product-section{margin:38px 0}.wep-subgroup{margin:26px 0}.wep-subgroup>h3{font-size:24px;margin:0 0 14px;padding-bottom:8px;border-bottom:2px solid #c8102e}
+.wep-section-heading{text-align:center;margin-bottom:20px}
+.wep-section-heading h2{font-size:32px;margin:0 0 8px}
+.wep-grid{display:grid;grid-template-columns:repeat(${cardsPerRow},minmax(0,1fr));gap:22px}
+.wep-card{display:flex;flex-direction:column;height:100%;overflow:hidden;border:1px solid #ccc;border-top:6px solid #c8102e;border-radius:14px;background:#fff;box-sizing:border-box;text-align:center}
+.wep-media{position:relative;height:285px;flex:0 0 285px;display:flex;align-items:center;justify-content:center;background:#f5f5f5}
+.wep-media img{width:100%;height:285px;object-fit:contain}
+.wep-badge{position:absolute;left:12px;top:12px;color:#fff;border-radius:20px;padding:6px 10px;font-weight:800}
+.wep-badge.stock{background:#287a32}
+.wep-badge.on-order{background:#1f5f99}
+.wep-badge.available{background:#555}
+.wep-rebate-badge{position:absolute;right:12px;top:12px;display:flex;flex-direction:column;max-width:145px;border-radius:9px;padding:8px 11px;background:#c8102e;color:#fff;line-height:1.1;text-align:center;box-shadow:0 2px 7px rgba(0,0,0,.2)}
+.wep-rebate-badge strong{text-transform:uppercase}
+.wep-rebate-badge small{margin-top:4px;font-size:11px}
+.wep-placeholder{text-align:center;font-size:22px}
+.wep-body{display:flex;flex:1;flex-direction:column;align-items:stretch;padding:18px;text-align:center}
+.wep-body h3{margin:0;font-size:23px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wep-compact-details{margin:7px 0 10px;color:#555;font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wep-offer{margin:2px 0 12px;padding:12px;border:1px solid #d5d5d5;border-radius:10px;background:#fafafa}
+.wep-prices{display:flex;align-items:end;justify-content:center;gap:18px;text-align:center}
+.wep-prices div{display:flex;flex-direction:column}
+.wep-prices span{font-size:11px;font-weight:800;text-transform:uppercase;color:#666}
+.wep-prices s{font-size:18px;color:#666}
+.wep-prices div>strong{font-size:18px;color:#333}
+.wep-current-price strong{font-size:27px!important;line-height:1.1;color:#c8102e!important}
+.wep-limited-offer{margin-top:10px;padding-top:8px;border-top:1px solid #ddd;text-align:center}
+.wep-limited-label{display:block;font-size:11px;font-weight:900;text-transform:uppercase;color:#555}
+.wep-extra-row{display:flex;align-items:center;justify-content:center;gap:9px;flex-wrap:wrap;margin-top:5px}
+.wep-extra-row strong{color:#287a32}
+.wep-extra-row b{color:#555}
+.wep-after-rebate{display:flex;align-items:baseline;justify-content:center;gap:8px;margin-top:5px;font-weight:900}
+.wep-after-rebate strong{font-size:21px;color:#c8102e}
+.wep-limited-offer small{display:block;margin-top:3px;color:#666;font-size:11px}.wep-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:14px 0 0;margin-top:auto;padding-top:14px}
+.wep-actions a{display:flex;align-items:center;justify-content:center;min-height:46px;border:2px solid #171717;border-radius:7px;padding:8px;text-decoration:none;font-weight:800;text-align:center}
+.wep-actions .primary{background:#c8102e;color:#fff}.wep-actions a:nth-child(n+3){grid-column:1/-1}
+@media(max-width:760px){
+  .wep-grid{grid-template-columns:1fr}
+  .wep-choice-grid{grid-template-columns:1fr}
+  .wep-seo-section{padding:18px}
+}
+</style>
+<div class="wep-page">
+  <section class="wep-hero">
+    <p>Serving New Milford and Danbury, Connecticut</p>
+    <h1>${escapeHtml(configuratorBrandName())} ${escapeHtml(category)} for Sale in Connecticut</h1>
+    <p>Compare models, specifications, current availability, prices, promotions and payment options.</p>
+    <p class="wep-updated">Inventory and offers updated ${escapeHtml(updatedLabel)}</p>
+  </section>
+  ${buyingGuide}
+  ${comparisonSection}
+  ${choiceGuide}
+  ${sections}
+  ${faq.html}
+  <section class="wep-hero">
+    <h2>Need Help Choosing?</h2>
+    <p>Call New Milford at <a href="tel:18603558722" style="color:#fff">860-355-8722</a>
+    or Danbury at <a href="tel:12037923030" style="color:#fff">203-792-3030</a>.</p>
+  </section>
+  <p style="font-size:12px">
+    Inventory and pricing are subject to change until confirmed.
+    Page: ${escapeHtml(pageUrl)}
+  </p>
+</div>`;
+
   $('stihl-webpage-code').value=html;
+  $('stihl-webpage-head-code').value=headCode;
   $('stihl-webpage-status').className='stihl-success';
-  $('stihl-webpage-status').textContent=`Webpage ready: ${products.length} ${category} product${products.length===1?'':'s'}.`;
+  $('stihl-webpage-status').textContent=
+    `Webpage ready: ${inventoryProducts.length} in stock/on order and `+
+    `${other.length} other active models.`;
+
   const report=[];
-  if(missingImages.length) report.push(`<strong>Missing ImageURL:</strong> ${missingImages.join(', ')}`);
-  if(missingUrls.length) report.push(`<strong>Missing ProductURL (details button hidden):</strong> ${missingUrls.join(', ')}`);
-  if(missingSpecs.length) report.push(`<strong>Missing specifications:</strong> ${missingSpecs.join(', ')}`);
-  report.push(`<strong>Expected price-tag PDFs:</strong> ${products.map(item=>`${skuOf(item)}.pdf`).join(', ')}`);
-  $('stihl-webpage-report').innerHTML=report.map(row=>`<div class="stihl-note">${row}</div>`).join('');
+
+  report.push(
+    `<strong>SEO Title (${seoTitle.length}/60):</strong> `+
+    `${escapeHtml(seoTitle)}`
+  );
+
+  report.push(
+    `<strong>Meta Description (${seoDescription.length}/160):</strong> `+
+    `${escapeHtml(seoDescription)}`
+  );
+
+  report.push(
+    `<strong>Canonical URL:</strong> ${escapeHtml(pageUrl)}`
+  );
+
+  report.push(
+    `<strong>SEO content:</strong> ${products.length} products in comparison table, `+
+    `${webpageComparisonColumns(products).length} comparison specifications, `+
+    `buying guide, model-selection highlights, local content and 4 FAQs.`
+  );
+
+  report.push(
+    `<strong>Dealer Spike:</strong> Paste Body Code into the page editor and SEO Head Code `+
+    `into the page header/SEO-code field. If separate SEO fields exist, use the displayed `+
+    `title, description and canonical values there instead.`
+  );
+
+  if(seoTitle.length<30 || seoTitle.length>60){
+    report.push(`<strong>SEO warning:</strong> Title length is ${seoTitle.length}; target 30–60 characters.`);
+  }
+
+  if(seoDescription.length<120 || seoDescription.length>160){
+    report.push(`<strong>SEO warning:</strong> Description length is ${seoDescription.length}; target 120–160 characters.`);
+  }
+
+  report.push(
+    `<strong>Indexing:</strong> ${allowIndex?'index,follow':'noindex,nofollow'} · `+
+    `Sitemap submission and Search Console verification remain site-level Dealer Spike tasks.`
+  );
+
+  if(missingImages.length){
+    report.push(
+      `<strong>Missing ImageURL:</strong> ${missingImages.join(', ')}`
+    );
+  }
+
+  if(missingUrls.length){
+    report.push(
+      `<strong>Missing ProductURL:</strong> ${missingUrls.join(', ')}`
+    );
+  }
+
+  if(missingSpecs.length){
+    report.push(
+      `<strong>Missing specifications:</strong> ${missingSpecs.join(', ')}`
+    );
+  }
+
+  report.push(
+    `<strong>Expected price-tag PDFs:</strong> `+
+    products.map(item=>`${skuOf(item)}.pdf`).join(', ')
+  );
+
+  $('stihl-webpage-report').innerHTML=
+    report.map(row=>`<div class="stihl-note">${row}</div>`).join('');
+}
+
+function dealerSpikePublicationPromotions(){
+  const brandId=configuratorBrandId();
+  const category=clean($('stihl-webpage-category')?.value);
+  const products=webpageProducts();
+  const productSkus=new Set(products.map(skuOf).map(value=>clean(value).toUpperCase()));
+  const reminders=new Map();
+
+  function addReminder(promotionId,promoName,displayLabel,endDate){
+    promotionId=clean(promotionId);
+    endDate=clean(endDate);
+
+    if(!promotionId || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) return;
+
+    const key=`${promotionId.toUpperCase()}|${endDate}`;
+
+    if(!reminders.has(key)){
+      reminders.set(key,{
+        promotionId,
+        promoName:clean(promoName),
+        displayLabel:clean(displayLabel),
+        endDate
+      });
+    }
+  }
+
+  (state.promotions || [])
+    .filter(promotion=>{
+      const promotionBrand=clean(promotion.QualifyingBrandID).toUpperCase();
+      const promotionCategory=clean(promotion.QualifyingCategory).toLowerCase();
+      const qualifyingSku=clean(promotion.QualifyingSKU).toUpperCase();
+      const qualifyingSeries=clean(promotion.QualifyingSeries).toLowerCase();
+      const qualifyingSubCategory=clean(promotion.QualifyingSubCategory).toLowerCase();
+      const qualifyingSystem=clean(promotion.QualifyingSystem).toLowerCase();
+
+      if(promotionBrand && promotionBrand!==brandId) return false;
+      if(promotionCategory && promotionCategory!==category.toLowerCase()) return false;
+      if(qualifyingSku && !productSkus.has(qualifyingSku)) return false;
+      if(qualifyingSeries && !products.some(item=>clean(item.Series).toLowerCase()===qualifyingSeries)) return false;
+      if(qualifyingSubCategory && !products.some(item=>clean(item.SubCategory).toLowerCase()===qualifyingSubCategory)) return false;
+      if(qualifyingSystem && !products.some(item=>clean(item.System).toLowerCase()===qualifyingSystem)) return false;
+      if(clean(promotion.Active) && !isTrue(promotion.Active)) return false;
+
+      return (
+        /^\d{4}-\d{2}-\d{2}$/.test(clean(promotion.EndDate)) &&
+        isDateActive(promotion.StartDate,promotion.EndDate)
+      );
+    })
+    .forEach(promotion=>addReminder(
+      clean(promotion.PromotionID),
+      clean(promotion.PromoName),
+      clean(promotion.DisplayLabel),
+      clean(promotion.EndDate)
+    ));
+
+  products.forEach(item=>{
+    const saleEnd=clean(item.SaleEndDate);
+    const rebateEnd=clean(item.RebateEndDate);
+    const productPromoName=clean(item.PromoName);
+    const productRebate=money(
+      clean(item.RebateToCustomer)!==''
+        ? item.RebateToCustomer
+        : item.CustomerRebateAmount
+    );
+
+    if(
+      money(item.SalePrice)>0 &&
+      isDateActive(item.SaleStartDate,saleEnd)
+    ){
+      addReminder(
+        `PRODUCT-SALE:${brandId}:${category}:${saleEnd}`,
+        productPromoName || `${configuratorBrandName()} ${category} sale pricing`,
+        'Published sale pricing',
+        saleEnd
+      );
+    }
+
+    if(
+      productRebate>0 &&
+      isDateActive(item.RebateStartDate,rebateEnd)
+    ){
+      addReminder(
+        `PRODUCT-REBATE:${brandId}:${category}:${rebateEnd}`,
+        productPromoName || `${configuratorBrandName()} ${category} customer rebate`,
+        'Published customer rebate',
+        rebateEnd
+      );
+    }
+
+    const finance=bestPromoFinanceForTool(item);
+    const financeEnd=clean(
+      finance?.PromoEndDate ||
+      finance?.ProgramEndDate ||
+      finance?.EndDate
+    );
+
+    if(finance && financeEnd){
+      const financeId=clean(finance.ProgramID) || clean(finance.ProgramName) || 'FINANCE';
+
+      addReminder(
+        `FINANCE:${brandId}:${financeId}:${financeEnd}`,
+        clean(finance.ProgramName) || `${configuratorBrandName()} financing`,
+        clean(finance.DisplayLabel) || 'Published finance offer',
+        financeEnd
+      );
+    }
+  });
+
+  return Array.from(reminders.values());
+}
+
+async function registerDealerSpikeWebpage(){
+  const token=clean(sessionStorage.getItem(dealerSessionStorageKey()));
+
+  if(!token){
+    return {
+      registered:false,
+      message:'Sign into Dealer Mode to register expiration reminders.'
+    };
+  }
+
+  const category=clean($('stihl-webpage-category')?.value);
+  const pageUrl=clean($('stihl-webpage-url')?.value);
+  const response=await fetch(
+    CONFIGURATOR_API + '/dealer-webpage-publication',
+    {
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'X-Dealer-Session':token
+      },
+      body:JSON.stringify({
+        brandId:configuratorBrandId(),
+        pageName:`${configuratorBrandName()} ${category}`,
+        pageUrl,
+        category,
+        promotions:dealerSpikePublicationPromotions()
+      }),
+      cache:'no-store'
+    }
+  );
+
+  const result=await response.json().catch(()=>({}));
+
+  if(!response.ok){
+    throw new Error(result.error || 'Unable to register webpage reminders.');
+  }
+
+  return {
+    registered:true,
+    promotionCount:Number(result.promotionCount)||0
+  };
 }
 
 async function copyDealerSpikeWebpage(){
   const code=$('stihl-webpage-code');
   if(!clean(code.value)) return;
   try{await navigator.clipboard.writeText(code.value);}catch(error){code.focus();code.select();document.execCommand('copy');}
-  $('stihl-webpage-status').textContent='Dealer Spike code copied.';
+
+  try{
+    const registration=await registerDealerSpikeWebpage();
+
+    $('stihl-webpage-status').textContent=
+      registration.registered
+        ? `Dealer Spike code copied. Expiration reminder registered for ${registration.promotionCount} promotion(s).`
+        : `Dealer Spike code copied. ${registration.message}`;
+  }catch(error){
+    console.error('Webpage reminder registration failed:',error);
+    $('stihl-webpage-status').textContent=
+      `Dealer Spike code copied, but the expiration reminder was not registered: ${error.message}`;
+  }
+}
+
+async function copyDealerSpikeWebpageHead(){
+  const code=$('stihl-webpage-head-code');
+  if(!clean(code?.value)) return;
+
+  try{
+    await navigator.clipboard.writeText(code.value);
+  }catch(error){
+    code.focus();
+    code.select();
+    document.execCommand('copy');
+  }
+
+  $('stihl-webpage-status').className='stihl-success';
+  $('stihl-webpage-status').textContent=
+    'SEO head code copied. Paste it into the Dealer Spike page header or SEO-code field.';
 }
 
 function downloadDealerSpikeWebpage(){
-  const html=$('stihl-webpage-code').value;
-  if(!clean(html)) return;
+  const bodyHtml=$('stihl-webpage-code').value;
+  const headHtml=$('stihl-webpage-head-code').value;
+  if(!clean(bodyHtml)) return;
+  const html='<!doctype html>\n<html lang="en-US">\n<head>\n'+
+    '<meta charset="utf-8">\n'+
+    '<meta name="viewport" content="width=device-width,initial-scale=1">\n'+
+    headHtml+'\n</head>\n<body>\n'+bodyHtml+'\n</body>\n</html>\n';
   const link=document.createElement('a');
   link.href=URL.createObjectURL(new Blob([html],{type:'text/html;charset=utf-8'}));
   link.download=`${webpageSlug($('stihl-webpage-filename').value)||'equipment-webpage'}.html`;
   link.click();
   setTimeout(()=>URL.revokeObjectURL(link.href),1000);
+}
+
+function previewDealerSpikeWebpage(){
+  const html=clean($('stihl-webpage-code')?.value);
+  const headHtml=clean($('stihl-webpage-head-code')?.value);
+
+  if(!html){
+    $('stihl-webpage-status').className='stihl-error';
+    $('stihl-webpage-status').textContent=
+      'Generate the webpage before opening a preview.';
+    return;
+  }
+
+  const frame=$('stihl-webpage-preview-frame');
+
+  if(!frame){
+    openDealerSpikeWebpagePreview();
+    return;
+  }
+
+  const pageTitle=clean($('stihl-webpage-category')?.value)||'Equipment';
+  frame.srcdoc=
+    '<!doctype html><html lang="en"><head>'+
+    '<meta charset="utf-8">'+
+    '<meta name="viewport" content="width=device-width,initial-scale=1">'+
+    (headHtml || `<title>${escapeHtml(configuratorBrandName())} ${escapeHtml(pageTitle)} Preview</title>`)+
+    '</head><body>'+html+'</body></html>';
+
+  const label=$('stihl-webpage-preview-label');
+  if(label) label.textContent=`${pageTitle} · updated ${new Date().toLocaleTimeString()}`;
+
+  $('stihl-webpage-status').className='stihl-success';
+  $('stihl-webpage-status').textContent='Preview refreshed below.';
+  frame.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function openDealerSpikeWebpagePreview(){
+  const html=clean($('stihl-webpage-code')?.value);
+
+  if(!html){
+    $('stihl-webpage-status').className='stihl-error';
+    $('stihl-webpage-status').textContent=
+      'Generate the webpage before opening a preview.';
+    return;
+  }
+
+  const preview=window.open('','_blank');
+
+  if(!preview){
+    $('stihl-webpage-status').className='stihl-error';
+    $('stihl-webpage-status').textContent=
+      'Please allow pop-ups to open the webpage preview.';
+    return;
+  }
+
+  const pageTitle=clean($('stihl-webpage-category')?.value)||'Equipment';
+
+  preview.document.open();
+  preview.document.write(
+    '<!doctype html><html lang="en"><head>'+
+    '<meta charset="utf-8">'+
+    '<meta name="viewport" content="width=device-width,initial-scale=1">'+
+    `<title>${escapeHtml(configuratorBrandName())} ${escapeHtml(pageTitle)} Preview</title>`+
+    '</head><body>'+html+'</body></html>'
+  );
+  preview.document.close();
+
+  $('stihl-webpage-status').className='stihl-success';
+  $('stihl-webpage-status').textContent=
+    'Preview opened in a new browser tab.';
 }
 /* ==========================
    Dealer Mode
@@ -21570,12 +23247,32 @@ function bindDealerMode(){
     populateWebpageCategories();
     updateWebpageDefaults();
     $("stihl-webpage-code").value='';
+    $("stihl-webpage-head-code").value='';
     $("stihl-webpage-report").innerHTML='';
     $("stihl-webpage-modal").style.display='flex';
   });
-  $("stihl-webpage-category")?.addEventListener("change",updateWebpageDefaults);
+  $("stihl-webpage-category")?.addEventListener("change",()=>{
+  updateWebpageDefaults();
+  populateWebpageDisplayOrders();
+  populateWebpageSpecs();
+});
+
+$("stihl-webpage-spec-recommended")?.addEventListener("click",()=>{
+  populateWebpageSpecs(true);
+});
+
+$("stihl-webpage-spec-all")?.addEventListener("click",()=>{
+  setAllWebpageSpecs(true);
+});
+
+$("stihl-webpage-spec-clear")?.addEventListener("click",()=>{
+  setAllWebpageSpecs(false);
+});
   $("stihl-generate-webpage")?.addEventListener("click",generateDealerSpikeWebpage);
+  $("stihl-preview-webpage")?.addEventListener("click",previewDealerSpikeWebpage);
+  $("stihl-open-preview-webpage")?.addEventListener("click",openDealerSpikeWebpagePreview);
   $("stihl-copy-webpage")?.addEventListener("click",copyDealerSpikeWebpage);
+  $("stihl-copy-webpage-head")?.addEventListener("click",copyDealerSpikeWebpageHead);
   $("stihl-download-webpage")?.addEventListener("click",downloadDealerSpikeWebpage);
   $("stihl-close-webpage")?.addEventListener("click",()=>{$("stihl-webpage-modal").style.display='none';});
   $("stihl-webpage-modal")?.addEventListener("click",event=>{if(event.target===$("stihl-webpage-modal")) $("stihl-webpage-modal").style.display='none';});
