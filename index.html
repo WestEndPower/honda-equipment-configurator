@@ -21259,7 +21259,7 @@ function populateWebpageOrderInput(field,id){
 
     input.value=current.has(value)
       ? current.get(value)
-      : String(index+1);
+      : '0';
 
     row.append(label,input);
     container.appendChild(row);
@@ -21316,21 +21316,25 @@ function webpageConfiguredOrder(field){
 }
 
 function webpageItemIncludedByOrders(item){
-  const fields=['PowerType','Series','SubCategory'];
-
-  const selections=fields.flatMap(field=>
-    webpageConfiguredOrder(field).map(value=>({
+  const activeSelections=[
+    'PowerType',
+    'Series',
+    'SubCategory'
+  ]
+    .map(field=>({
       field,
-      value
+      values:webpageConfiguredOrder(field)
     }))
-  );
+    .filter(selection=>selection.values.length>0);
 
-  if(!selections.length){
+  if(!activeSelections.length){
     return false;
   }
 
-  return selections.some(selection=>
-    clean(item[selection.field])===selection.value
+  return activeSelections.every(selection=>
+    selection.values.includes(
+      clean(item[selection.field])
+    )
   );
 }
 
