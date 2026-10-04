@@ -16983,8 +16983,8 @@ function batteryWeight(code){
           clean(tool.Model).toUpperCase() &&
         !candidate.PackageRow &&
         (
-          clean(candidate.ProductType).toLowerCase() === 'tool' ||
-          clean(candidate.Type).toLowerCase() === 'tool'
+          ['tool','unit'].includes(clean(candidate.ProductType).toLowerCase()) ||
+          ['tool','unit'].includes(clean(candidate.Type).toLowerCase())
         )
       );
 
