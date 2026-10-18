@@ -1,87 +1,97 @@
+# WEP_HONDA_MARKETPLACE_IMAGES_V1
 [CmdletBinding()]
 param(
-    [string]$Repository = "C:\NMWEPE\GitHub\honda-equipment-configurator",
-    [string]$Branch = "main",
-    [switch]$StatusOnly, [string]$StatusFile = ""
+    [string]$Repository = 'C:\NMWEPE\GitHub\honda-equipment-configurator',
+    [string]$Branch = 'main',
+    [switch]$StatusOnly,
+    [string]$StatusFile = '',
+    [string]$MarketplaceRepository = 'C:\NMWEPE\GitHub\westendpower-marketplace-public'
 )
-
-$ErrorActionPreference = "Stop"
-$publicPaths = @(
-    ":(glob)data/*.csv",
-    ":(glob)images/**",
-    "index.html"
+$ErrorActionPreference = 'Stop'
+$jobs = @(
+    @{ Name='Honda'; Root=$Repository; Paths=@(':(glob)data/*.csv', ':(glob)images/**', 'index.html', 'Publish-Honda-Website.ps1'); Allowed='^(data/[^/]+\.csv|images/.+|index\.html|Publish-Honda-Website\.ps1)$' },
+    @{ Name='Marketplace Honda'; Root=$MarketplaceRepository; Paths=@('brands/honda/data', 'brands/honda/images', 'data/marketplace-catalog.json', 'marketplace.html', 'scripts/marketplace-sync.cjs', 'scripts/honda-marketplace-images.cjs'); Allowed='^(brands/honda/(data|images)/.+|data/marketplace-catalog\.json|marketplace\.html|scripts/(marketplace-sync|honda-marketplace-images)\.cjs)$' }
 )
-
-function Invoke-Git {
-    param([Parameter(ValueFromRemainingArguments = $true)][string[]]$Arguments)
-    $output = & git -C $Repository @Arguments 2>&1
-    if ($LASTEXITCODE -ne 0) { throw ($output -join [Environment]::NewLine) }
+function Invoke-RepoGit {
+    param([string]$Root, [string[]]$GitArguments)
+    $previousPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Continue'
+        $output = & git -C $Root @GitArguments 2>&1
+        $gitExit = $LASTEXITCODE
+    } finally { $ErrorActionPreference = $previousPreference }
+    if ($gitExit -ne 0) { throw ($output -join [Environment]::NewLine) }
     return @($output)
 }
-
-function Get-PublishState {
-    try {
-        if (-not (Test-Path -LiteralPath (Join-Path $Repository ".git"))) { return "ERROR" }
-        $currentBranch = (Invoke-Git branch --show-current | Select-Object -First 1).Trim()
-        if ($currentBranch -ne $Branch) { return "ERROR" }
-        $ahead = [int](Invoke-Git rev-list --count "origin/$Branch..HEAD" | Select-Object -First 1)
-        if ($ahead -gt 0) { return "PUSH" }
-        $changes = Invoke-Git status --porcelain --untracked-files=all -- @publicPaths
-        if (@($changes).Count -gt 0) { return "CHANGES" }
-        return "CURRENT"
-    }
-    catch { return "ERROR" }
+function Get-JobState {
+    param($Job)
+    if (!(Test-Path -LiteralPath (Join-Path $Job.Root '.git'))) { throw "Repository not found: $($Job.Root)" }
+    $current = [string](Invoke-RepoGit $Job.Root @('branch','--show-current') | Select-Object -First 1)
+    if ($current.Trim() -ne $Branch) { throw "Expected branch $Branch in $($Job.Root)." }
+    $ahead = [int](Invoke-RepoGit $Job.Root @('rev-list','--count',"origin/$Branch..HEAD") | Select-Object -First 1)
+    if ($ahead -gt 0) { return 'PUSH' }
+    $changes = @(Invoke-RepoGit $Job.Root (@('status','--porcelain','--untracked-files=all','--') + $Job.Paths))
+    if ($changes.Count -gt 0) { return 'CHANGES' }
+    return 'CURRENT'
 }
-
 if ($StatusOnly) {
-    $state = Get-PublishState
-    if ($StatusFile) {
-        [System.IO.File]::WriteAllText(
-            $StatusFile,
-            $state,
-            [System.Text.Encoding]::ASCII
-        )
-    }
-    else {
-        Write-Output $state
-    }
+    try {
+        $states = @($jobs | ForEach-Object { Get-JobState $_ })
+        $state = if ($states -contains 'PUSH') { 'PUSH' } elseif ($states -contains 'CHANGES') { 'CHANGES' } else { 'CURRENT' }
+    } catch { $state = 'ERROR' }
+    if ($StatusFile) { [IO.File]::WriteAllText($StatusFile, $state, [Text.Encoding]::ASCII) }
+    else { Write-Output $state }
     exit 0
 }
-
-Write-Host "HONDA WEBSITE PUBLISHER" -ForegroundColor Cyan
-Write-Host "Repository: $Repository"
-if (-not (Get-Command git -ErrorAction SilentlyContinue)) { throw "Git was not found." }
-if (-not (Test-Path -LiteralPath (Join-Path $Repository ".git"))) { throw "Honda Git repository was not found: $Repository" }
-
-$branchName = (Invoke-Git branch --show-current | Select-Object -First 1).Trim()
-if ($branchName -ne $Branch) { throw "Expected branch '$Branch', but the repository is on '$branchName'." }
-
-Invoke-Git fetch origin --prune | Out-Null
-$behind = [int](Invoke-Git rev-list --count "HEAD..origin/$Branch" | Select-Object -First 1)
-if ($behind -gt 0) { throw "Local $Branch is behind origin/$Branch by $behind commit(s). Update it before publishing." }
-
-$changes = Invoke-Git status --short --untracked-files=all -- @publicPaths
-$ahead = [int](Invoke-Git rev-list --count "origin/$Branch..HEAD" | Select-Object -First 1)
-
-if (@($changes).Count -gt 0) {
-    Write-Host "`nPUBLIC FILES TO COMMIT:" -ForegroundColor Yellow
-    $changes | ForEach-Object { Write-Host $_ }
-    $confirmation = Read-Host "Type PUBLISH to commit and push these public files"
-    if ($confirmation -cne "PUBLISH") { Write-Host "Cancelled. Nothing was staged." -ForegroundColor Yellow; Read-Host "Press Enter to close"; exit 0 }
-    Invoke-Git add -- @publicPaths | Out-Null
-    $staged = Invoke-Git diff --cached --name-only
-    if (@($staged).Count -eq 0) { throw "Git did not stage any approved public files." }
-    Write-Host "`nSTAGED FILES:" -ForegroundColor Cyan
-    $staged | ForEach-Object { Write-Host $_ }
-    Invoke-Git commit -m "Publish Honda website updates $(Get-Date -Format 'yyyy-MM-dd HH:mm')" | ForEach-Object { Write-Host $_ }
-    $ahead = 1
+try {
+    Write-Host 'HONDA AND MARKETPLACE PUBLISHER' -ForegroundColor Cyan
+    foreach ($job in $jobs) {
+        $null = Get-JobState $job
+        $null = Invoke-RepoGit $job.Root @('fetch','origin','--prune')
+        $behind = [int](Invoke-RepoGit $job.Root @('rev-list','--count',"HEAD..origin/$Branch") | Select-Object -First 1)
+        if ($behind -gt 0) { throw "$($job.Name) is behind origin/$Branch. Update that repository before publishing." }
+        $staged = @(Invoke-RepoGit $job.Root @('diff','--cached','--name-only'))
+        $outside = @($staged | Where-Object { ([string]$_) -notmatch $job.Allowed })
+        if ($outside.Count -gt 0) { throw "Unrelated files are already staged in $($job.Name). Unstage those files first: $($outside -join ', ')" }
+    }
+    $sync = Join-Path $MarketplaceRepository 'scripts\marketplace-sync.cjs'
+    $products = Join-Path $Repository 'data\products.csv'
+    if (!(Test-Path -LiteralPath $sync) -or !(Test-Path -LiteralPath $products)) { throw 'Honda public products.csv or Marketplace sync script was not found.' }
+    & node $sync honda $products
+    if ($LASTEXITCODE -ne 0) { throw 'Honda Marketplace sync failed; publishing stopped.' }
+    $hasChanges = $false
+    foreach ($job in $jobs) {
+        $job.Changes = @(Invoke-RepoGit $job.Root (@('status','--short','--untracked-files=all','--') + $job.Paths))
+        $job.Ahead = [int](Invoke-RepoGit $job.Root @('rev-list','--count',"origin/$Branch..HEAD") | Select-Object -First 1)
+        if ($job.Changes.Count -gt 0) {
+            $hasChanges = $true
+            Write-Host "`n$($job.Name) public files:" -ForegroundColor Yellow
+            $job.Changes | ForEach-Object { Write-Host $_ }
+        }
+    }
+    if ($hasChanges) {
+        $confirmation = Read-Host 'Type PUBLISH to commit and push these public files to both repositories'
+        if ($confirmation -cne 'PUBLISH') { Write-Host 'Cancelled. Nothing was staged.'; return }
+    }
+    foreach ($job in $jobs) {
+        if ($job.Changes.Count -gt 0) {
+            $null = Invoke-RepoGit $job.Root (@('add','--') + $job.Paths)
+            $staged = @(Invoke-RepoGit $job.Root @('diff','--cached','--name-only'))
+            if ($staged.Count -gt 0) {
+                Invoke-RepoGit $job.Root @('commit','-m',"Publish Honda data and images $(Get-Date -Format 'yyyy-MM-dd HH:mm')") | ForEach-Object { Write-Host $_ }
+                $job.Ahead = 1
+            }
+        }
+        if ($job.Ahead -gt 0) {
+            Write-Host "`nPushing $($job.Name)..." -ForegroundColor Cyan
+            Invoke-RepoGit $job.Root @('push','origin',$Branch) | ForEach-Object { Write-Host $_ }
+        }
+    }
+    Write-Host "`nPASS: Honda and Marketplace are published." -ForegroundColor Green
+} catch {
+    Write-Host "FAILED: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host 'If one repository already pushed, correct the error and run the button again to finish the other.'
+    Read-Host 'Press Enter to close'
+    exit 1
 }
-
-if ($ahead -gt 0) {
-    Write-Host "`nPUSHING TO GITHUB:" -ForegroundColor Cyan
-    Invoke-Git push origin $Branch | ForEach-Object { Write-Host $_ }
-    Write-Host "`nPASS: Honda website changes were committed and pushed. GitHub Pages will publish them automatically." -ForegroundColor Green
-} else {
-    Write-Host "`nGitHub is already up to date." -ForegroundColor Green
-}
-Read-Host "Press Enter to close"
+Read-Host 'Press Enter to close'
